@@ -1,0 +1,23 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      # La BD SQLite persiste en el volumen montado en /data.
+      CHURRASCO_DB_PATH: /data/churrasco.db
+    volumes:
+      - churrasco-data:/data
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      # La app queda accesible en http://localhost:8080
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  churrasco-data:

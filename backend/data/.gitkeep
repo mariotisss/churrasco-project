@@ -1,0 +1,3 @@
+# Esta carpeta guarda el fichero SQLite (churrasco.db) en ejecucion local.
+# El .db se ignora en git (ver .gitignore), pero la carpeta debe existir para que
+# SQLite pueda crear el fichero al arrancar.
