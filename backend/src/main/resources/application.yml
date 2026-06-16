@@ -2,22 +2,22 @@ spring:
   application:
     name: churrasco-cup
   datasource:
-    # Fichero SQLite. En Docker se sobreescribe con CHURRASCO_DB_PATH=/data/churrasco.db
+    # SQLite file. In Docker it is overridden with CHURRASCO_DB_PATH=/data/churrasco.db
     url: jdbc:sqlite:${CHURRASCO_DB_PATH:./data/churrasco.db}
     driver-class-name: org.sqlite.JDBC
     hikari:
       maximum-pool-size: ${CHURRASCO_DB_POOL_SIZE:5}
-      # Evita errores "database is locked" bajo concurrencia esperando al lock
+      # Avoids "database is locked" errors under concurrency by waiting for the lock
       connection-init-sql: "PRAGMA busy_timeout=5000"
   sql:
     init:
-      # Ejecuta schema.sql al arrancar (idempotente). SQLite no es "embedded" para
-      # Spring, por eso hace falta 'always'.
+      # Runs schema.sql at startup (idempotent). SQLite is not "embedded" for
+      # Spring, hence 'always' is required.
       mode: always
   jpa:
     open-in-view: false
     hibernate:
-      # El esquema lo gobierna schema.sql, no Hibernate (SQLite + DDL automatico da problemas).
+      # The schema is governed by schema.sql, not Hibernate (SQLite + auto DDL is problematic).
       ddl-auto: none
     properties:
       hibernate:
@@ -28,8 +28,8 @@ server:
 
 churrasco:
   cors:
-    # Patrones de origen permitidos (allowedOriginPatterns), coma-separados.
-    # Por defecto "*" para funcionar en dev (Vite) y servido desde cualquier host de la oficina.
+    # Allowed origin patterns (allowedOriginPatterns), comma-separated.
+    # Defaults to "*" to work in dev (Vite) and when served from any office host.
     allowed-origins: ${CHURRASCO_CORS_ORIGINS:*}
 
 logging:

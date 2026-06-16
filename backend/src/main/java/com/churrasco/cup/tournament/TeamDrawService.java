@@ -23,13 +23,13 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Sortea los equipos de una edicion y genera su calendario.
- * Si el numero de participantes es impar, se randomiza el jugador que queda fuera.
+ * Draws the teams for an edition and generates its schedule.
+ * If the number of participants is odd, the player who sits out is chosen at random.
  */
 @Service
 public class TeamDrawService {
 
-    private static final int MIN_PARTICIPANTS = 4; // al menos 2 equipos
+    private static final int MIN_PARTICIPANTS = 4; // at least 2 teams
 
     private final EditionRepository editionRepository;
     private final PlayerRepository playerRepository;
@@ -67,7 +67,7 @@ public class TeamDrawService {
                     "Se necesitan al menos " + MIN_PARTICIPANTS + " jugadores (2 equipos) para sortear");
         }
 
-        // Limpia un sorteo anterior (partidos antes que equipos por las claves foraneas).
+        // Clear a previous draw (matches before teams because of the foreign keys).
         matchRepository.deleteByEditionId(editionId);
         teamRepository.deleteByEditionId(editionId);
         matchRepository.flush();
@@ -76,7 +76,7 @@ public class TeamDrawService {
         List<Player> pool = new ArrayList<>(participants);
         Collections.shuffle(pool, random);
 
-        // Numero impar -> uno se queda fuera (aleatorio, ya que el pool esta barajado).
+        // Odd count -> one sits out (random, since the pool is already shuffled).
         if (pool.size() % 2 != 0) {
             Player satOut = pool.remove(pool.size() - 1);
             edition.setSatOutPlayer(satOut);
@@ -104,7 +104,7 @@ public class TeamDrawService {
         if (participantIds == null || participantIds.isEmpty()) {
             return playerRepository.findByActiveTrueOrderByNameAsc();
         }
-        // Mantiene unicidad preservando el orden de llegada.
+        // Keep uniqueness while preserving insertion order.
         Map<Long, Player> unique = new LinkedHashMap<>();
         for (Long id : participantIds) {
             if (unique.containsKey(id)) {

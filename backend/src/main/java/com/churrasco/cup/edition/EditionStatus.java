@@ -1,13 +1,13 @@
 package com.churrasco.cup.edition;
 
-/** Ciclo de vida de una edicion mensual. */
+/** Lifecycle of a monthly edition. */
 public enum EditionStatus {
-    /** Creada, aun sin equipos sorteados. */
+    /** Created, teams not drawn yet. */
     DRAFT,
-    /** Equipos sorteados y calendario generado, sin resultados todavia. */
+    /** Teams drawn and schedule generated, no results yet. */
     TEAMS_DRAWN,
-    /** Liga en juego (hay al menos un resultado) o Finalissima pendiente. */
+    /** League in progress (at least one result) or Finalissima pending. */
     IN_PROGRESS,
-    /** Finalissima jugada y campeon decidido. */
+    /** Finalissima played and champion decided. */
     FINISHED
 }

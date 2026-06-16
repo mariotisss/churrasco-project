@@ -7,7 +7,7 @@ import com.churrasco.cup.team.dto.TeamRefDto;
 
 import java.util.List;
 
-/** Vista completa de una edicion para pintar el cuadro interactivo. */
+/** Full view of an edition for rendering the interactive bracket. */
 public record EditionDetailDto(
         Long id,
         String name,

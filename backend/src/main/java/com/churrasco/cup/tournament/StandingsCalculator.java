@@ -13,11 +13,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Calcula la clasificacion de la liga a partir de los partidos jugados.
- * No se persiste: siempre se deriva, asi editar un resultado recalcula correctamente.
+ * Computes the league standings from the matches played.
+ * Not persisted: always derived, so editing a result recalculates correctly.
  *
- * Puntos: victoria 3, empate 1, derrota 0.
- * Desempate: puntos -> diferencia de goles -> goles a favor -> nombre del equipo.
+ * Points: win 3, draw 1, loss 0.
+ * Tie-break: points -> goal difference -> goals for -> team name.
  */
 @Component
 public class StandingsCalculator {
@@ -29,8 +29,8 @@ public class StandingsCalculator {
             .thenComparing(a -> a.team.getName(), String.CASE_INSENSITIVE_ORDER);
 
     /**
-     * @param teams        todos los equipos de la edicion (aparecen aunque no hayan jugado)
-     * @param leagueMatches partidos de liga (sin la Finalissima); solo se cuentan los PLAYED
+     * @param teams         all teams in the edition (they appear even if they haven't played)
+     * @param leagueMatches league matches (excluding the Finalissima); only PLAYED ones count
      */
     public List<StandingRowDto> compute(List<Team> teams, List<Match> leagueMatches) {
         Map<Long, Acc> table = new LinkedHashMap<>();
@@ -45,7 +45,7 @@ public class StandingsCalculator {
             Acc home = table.get(m.getHomeTeam().getId());
             Acc away = table.get(m.getAwayTeam().getId());
             if (home == null || away == null) {
-                continue; // partido de otra edicion; no deberia ocurrir
+                continue; // match from another edition; should not happen
             }
             int hs = m.getHomeScore();
             int as = m.getAwayScore();
@@ -76,7 +76,7 @@ public class StandingsCalculator {
         return rows;
     }
 
-    /** Acumulador mutable interno por equipo. */
+    /** Internal mutable accumulator per team. */
     private static final class Acc {
         private final Team team;
         private int played;

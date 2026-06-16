@@ -72,8 +72,8 @@ public class MatchService {
     }
 
     /**
-     * Cuando se completa la liga (sin partidos PENDING) y aun no existe Finalissima,
-     * la crea automaticamente entre el 1o y el 2o de la clasificacion.
+     * When the league is complete (no PENDING matches) and no Finalissima exists yet,
+     * creates it automatically between the 1st and 2nd in the standings.
      */
     private void maybeCreateFinalissima(Edition edition) {
         Long editionId = edition.getId();

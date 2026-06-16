@@ -10,12 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Genera el calendario de un round-robin doble (ida y vuelta) para N equipos:
- * cada par juega 2 veces -> N*(N-1) partidos en total (3 eq.->6, 4 eq.->12).
+ * Generates the schedule for a double round-robin (home and away) for N teams:
+ * each pair plays twice -> N*(N-1) matches total (3 teams -> 6, 4 teams -> 12).
  *
- * Usa el "metodo del circulo" para repartir los emparejamientos en jornadas en las que
- * ningun equipo juega dos veces. La VUELTA repite los mismos emparejamientos invirtiendo
- * local/visitante.
+ * Uses the "circle method" to spread the pairings across rounds where no team plays
+ * twice. The VUELTA (away leg) repeats the same pairings with home/away swapped.
  */
 @Component
 public class ScheduleGenerator {
@@ -33,11 +32,11 @@ public class ScheduleGenerator {
         List<Match> matches = new ArrayList<>(idaPairings.size() * 2);
         int order = 0;
 
-        // IDA: a en casa, b fuera
+        // IDA (home leg): a at home, b away
         for (int[] pair : idaPairings) {
             matches.add(new Match(edition, teams.get(pair[0]), teams.get(pair[1]), Leg.IDA, order++, false));
         }
-        // VUELTA: se invierte local/visitante
+        // VUELTA (away leg): home/away swapped
         for (int[] pair : idaPairings) {
             matches.add(new Match(edition, teams.get(pair[1]), teams.get(pair[0]), Leg.VUELTA, order++, false));
         }
@@ -46,8 +45,8 @@ public class ScheduleGenerator {
     }
 
     /**
-     * Emparejamientos de un round-robin simple (cada par una vez) ordenados por jornadas
-     * mediante el metodo del circulo. Devuelve indices sobre la lista de equipos.
+     * Single round-robin pairings (each pair once) ordered into rounds via the circle
+     * method. Returns indices into the team list.
      */
     private List<int[]> roundRobinPairings(int n) {
         List<Integer> slots = new ArrayList<>();
@@ -55,7 +54,7 @@ public class ScheduleGenerator {
             slots.add(i);
         }
         if (n % 2 != 0) {
-            slots.add(BYE); // ronda de descanso para el numero impar
+            slots.add(BYE); // bye round for an odd team count
         }
 
         int m = slots.size();
@@ -71,7 +70,7 @@ public class ScheduleGenerator {
                     pairings.add(new int[]{a, b});
                 }
             }
-            // Rotacion: el primer elemento queda fijo y el resto gira una posicion.
+            // Rotation: the first slot stays fixed and the rest rotate by one position.
             Integer last = slots.remove(m - 1);
             slots.add(1, last);
         }

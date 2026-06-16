@@ -8,16 +8,16 @@ dist/
 npm-debug.log*
 yarn-error.log*
 
-# --- SQLite (la BD no se versiona; la carpeta data/ sí, vía .gitkeep) ---
+# --- SQLite (the DB isn't versioned; the data/ folder is, via .gitkeep) ---
 *.db
 *.db-wal
 *.db-shm
 
-# --- Entorno / secretos ---
+# --- Environment / secrets ---
 .env
 .env.*
 
-# --- IDE / SO ---
+# --- IDE / OS ---
 .idea/
 *.iml
 .vscode/

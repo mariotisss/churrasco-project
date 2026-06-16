@@ -3,7 +3,7 @@ package com.churrasco.cup.edition.dto;
 import java.util.List;
 
 /**
- * Peticion de sorteo. Si participantIds es null o vacio, se usan todos los jugadores activos.
+ * Draw request. If participantIds is null or empty, all active players are used.
  */
 public record DrawRequest(List<Long> participantIds) {
 }

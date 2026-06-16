@@ -55,7 +55,7 @@ public class PlayerService {
         return DtoMapper.toPlayerDto(player);
     }
 
-    /** Baja logica: no se borra, se marca inactivo (preserva historial de ediciones). */
+    /** Soft delete: the player is not removed, just marked inactive (preserves edition history). */
     @Transactional
     public void deactivate(Long id) {
         Player player = repository.findById(id)

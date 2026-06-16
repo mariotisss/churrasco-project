@@ -1,54 +1,54 @@
 # 🏆 Churrasco's Cup
 
-Overview web del torneo mensual de futbolín de la oficina. Cada edición (mes) se presentan
-jugadores que se sortean en **equipos de 2**, juegan un **round-robin doble** (ida y vuelta) y los
-**2 primeros** de la clasificación disputan la **Finalissima** para decidir quién gana la edición.
+Web overview for the office's monthly table-football (futbolín) tournament. Each edition (month)
+players sign up, get drawn into **2-player teams**, play a **double round-robin** (home and away),
+and the **top 2** in the standings dispute the **Finalissima** to decide who wins the edition.
 
-- Gestión de **jugadores** (alta/edición; baja lógica para no perder historial).
-- **Sorteo** de equipos por edición (si el nº de jugadores es impar, uno se queda fuera al azar).
-- Generación automática del **calendario** y registro de **resultados**.
-- **Cuadro interactivo** (clasificación + partidos + Finalissima) que se actualiza al anotar.
+- **Player** management (add/edit; soft delete to keep history).
+- **Team draw** per edition (if the number of players is odd, one sits out at random).
+- Automatic **schedule** generation and **result** recording.
+- **Interactive bracket** (standings + matches + Finalissima) that updates as you score.
 
 ## Stack
 
-| Capa     | Tecnología                                                        |
+| Layer    | Technology                                                        |
 |----------|-------------------------------------------------------------------|
 | Backend  | Java 21 · Spring Boot 3 (Web, Data JPA, Validation)               |
-| BD       | SQLite (fichero, sin servidor) · esquema en `schema.sql`          |
+| DB       | SQLite (file-based, no server) · schema in `schema.sql`           |
 | Frontend | React + TypeScript + Vite · TanStack Query · Tailwind CSS         |
-| Deploy   | Docker Compose (backend + nginx) con volumen para la BD           |
+| Deploy   | Docker Compose (backend + nginx) with a volume for the DB         |
 
-## Estructura
+## Layout
 
 ```
 churrasco-project/
-├── backend/        # API REST Spring Boot + lógica de torneo
-├── frontend/       # SPA React (Vite)
+├── backend/        # Spring Boot REST API + tournament logic
+├── frontend/       # React SPA (Vite)
 └── docker-compose.yml
 ```
 
-## Arranque con Docker (sin instalar nada más)
+## Run with Docker (nothing else to install)
 
 ```bash
 docker compose up --build
-# o, con el binario clásico:
+# or, with the classic binary:
 docker-compose up --build
 ```
 
-App disponible en **http://localhost:8080**. La BD persiste en el volumen `churrasco-data`.
+App available at **http://localhost:8080**. The DB persists in the `churrasco-data` volume.
 
-## Desarrollo en local
+## Local development
 
-Requisitos: **JDK 21** y **Node 20+**.
+Requirements: **JDK 21** and **Node 20+**.
 
-**Backend** (puerto 8080):
+**Backend** (port 8080):
 
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
 
-**Frontend** (puerto 5173, con proxy de `/api` al backend):
+**Frontend** (port 5173, proxies `/api` to the backend):
 
 ```bash
 cd frontend
@@ -56,41 +56,41 @@ npm install
 npm run dev
 ```
 
-Tests del backend:
+Backend tests:
 
 ```bash
 cd backend
 ./mvnw test
 ```
 
-## API REST (resumen)
+## REST API (summary)
 
-| Método | Ruta                          | Descripción                                  |
+| Method | Path                          | Description                                  |
 |--------|-------------------------------|----------------------------------------------|
-| GET    | `/api/players`                | Lista jugadores (`?activeOnly=true`)         |
-| POST   | `/api/players`                | Alta de jugador                              |
-| PATCH  | `/api/players/{id}`           | Editar nombre / activar                      |
-| DELETE | `/api/players/{id}`           | Baja lógica (inactivo)                       |
-| GET    | `/api/editions`               | Lista de ediciones                           |
-| POST   | `/api/editions`               | Crear edición                                |
-| GET    | `/api/editions/{id}`          | Detalle completo (cuadro)                    |
-| POST   | `/api/editions/{id}/draw`     | Sortear equipos (`{ participantIds? }`)      |
-| GET    | `/api/editions/{id}/standings`| Clasificación calculada                      |
-| PUT    | `/api/matches/{id}/result`    | Anotar resultado (`{ homeScore, awayScore }`)|
+| GET    | `/api/players`                | List players (`?activeOnly=true`)            |
+| POST   | `/api/players`                | Create a player                              |
+| PATCH  | `/api/players/{id}`           | Edit name / activate                         |
+| DELETE | `/api/players/{id}`           | Soft delete (mark inactive)                  |
+| GET    | `/api/editions`               | List editions                                |
+| POST   | `/api/editions`               | Create an edition                            |
+| GET    | `/api/editions/{id}`          | Full detail (the bracket)                    |
+| POST   | `/api/editions/{id}/draw`     | Draw teams (`{ participantIds? }`)           |
+| GET    | `/api/editions/{id}/standings`| Computed standings                           |
+| PUT    | `/api/matches/{id}/result`    | Record a result (`{ homeScore, awayScore }`) |
 
-Al anotar el último partido de liga, la **Finalissima** se crea automáticamente entre el 1º y el 2º.
-Al anotar la Finalissima, se fija el **campeón** y la edición pasa a `FINISHED`.
+When the last league match is recorded, the **Finalissima** is created automatically between the
+1st and 2nd teams. Recording the Finalissima sets the **champion** and moves the edition to `FINISHED`.
 
-## Notas de diseño
+## Design notes
 
-- **Clasificación calculada, no persistida**: editar cualquier resultado siempre recalcula bien.
-- **SQLite + fechas**: los `Instant` se guardan como epoch-millis (`InstantEpochMilliConverter`)
-  para evitar el parseo de `TIMESTAMP` del driver sqlite-jdbc.
-- **Esquema** en `backend/src/main/resources/schema.sql` (ejecutado al arrancar, idempotente).
-  Para evolucionar el esquema más adelante se puede introducir Flyway/Liquibase.
+- **Standings are computed, not persisted**: editing any result always recalculates correctly.
+- **SQLite + dates**: `Instant` values are stored as epoch-millis (`InstantEpochMilliConverter`)
+  to avoid the sqlite-jdbc driver's `TIMESTAMP` parsing.
+- **Schema** lives in `backend/src/main/resources/schema.sql` (run at startup, idempotent).
+  Flyway/Liquibase can be introduced later to evolve the schema.
 
-## Próximas extensiones (el modelo ya lo soporta)
+## Possible extensions (the model already supports them)
 
-- Palmarés histórico de campeones y estadísticas por jugador entre ediciones.
-- Reglas de desempate avanzadas (head-to-head).
-- Live updates con SSE/WebSocket en lugar del refresco periódico actual.
+- Historical champion roll and per-player stats across editions.
+- Advanced tie-breaking rules (head-to-head).
+- Live updates via SSE/WebSocket instead of the current periodic refresh.

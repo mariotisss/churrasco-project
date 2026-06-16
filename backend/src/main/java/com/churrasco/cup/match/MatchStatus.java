@@ -1,6 +1,6 @@
 package com.churrasco.cup.match;
 
-/** Estado de un partido. */
+/** Match status. */
 public enum MatchStatus {
     PENDING,
     PLAYED

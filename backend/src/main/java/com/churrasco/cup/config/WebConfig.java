@@ -16,9 +16,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        // allowedOriginPatterns admite "*" y comodines. Por defecto es "*": la app se sirve
-        // same-origin tras nginx y se accede desde hosts variables (varias maquinas de la oficina),
-        // y al no usar cookies/credenciales no hay riesgo en permitir cualquier origen.
+        // allowedOriginPatterns supports "*" and wildcards. Defaults to "*": the app is served
+        // same-origin behind nginx and reached from varying hosts (different office machines),
+        // and since no cookies/credentials are used, allowing any origin is safe here.
         registry.addMapping("/api/**")
                 .allowedOriginPatterns(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")

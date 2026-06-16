@@ -3,7 +3,7 @@ package com.churrasco.cup.common;
 import java.time.Instant;
 import java.util.Map;
 
-/** Cuerpo JSON estandar para los errores de la API. */
+/** Standard JSON body for API errors. */
 public record ApiError(
         Instant timestamp,
         int status,

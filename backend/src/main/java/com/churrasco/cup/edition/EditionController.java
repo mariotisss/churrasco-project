@@ -43,7 +43,7 @@ public class EditionController {
         return service.getDetail(id);
     }
 
-    /** Sortea (o re-sortea) los equipos y genera el calendario. */
+    /** Draws (or re-draws) the teams and generates the schedule. */
     @PostMapping("/{id}/draw")
     public EditionDetailDto draw(@PathVariable Long id,
                                  @RequestBody(required = false) DrawRequest request) {

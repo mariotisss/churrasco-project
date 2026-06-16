@@ -30,14 +30,14 @@ public class Edition {
     @Column(nullable = false)
     private EditionStatus status = EditionStatus.DRAFT;
 
-    /** Jugador que queda fuera cuando el numero de participantes es impar (puede ser null). */
+    /** Player who sits out when the number of participants is odd (may be null). */
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sat_out_player_id")
     private Player satOutPlayer;
 
     /**
-     * Equipo campeon de la edicion. Se guarda como id (no como asociacion) para evitar
-     * una dependencia circular edition <-> team en el esquema de SQLite.
+     * The edition's champion team. Stored as an id (not an association) to avoid a
+     * circular edition <-> team dependency in the SQLite schema.
      */
     @Column(name = "champion_team_id")
     private Long championTeamId;

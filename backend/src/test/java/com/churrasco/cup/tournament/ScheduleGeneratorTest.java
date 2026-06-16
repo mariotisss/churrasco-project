@@ -61,14 +61,14 @@ class ScheduleGeneratorTest {
         assertEquals(6, ida);
         assertEquals(6, vuelta);
 
-        // Cada pareja ordenada (local>visitante) aparece como mucho una vez.
+        // Each ordered pair (home>away) appears at most once.
         Set<String> orderedPairs = new HashSet<>();
         for (Match m : matches) {
             String key = m.getHomeTeam().getName() + ">" + m.getAwayTeam().getName();
             assertTrue(orderedPairs.add(key), "Pareja ordenada repetida: " + key);
         }
 
-        // Cada pareja no ordenada aparece exactamente dos veces (ida y vuelta).
+        // Each unordered pair appears exactly twice (home and away).
         Map<String, Integer> unordered = new HashMap<>();
         for (Match m : matches) {
             String a = m.getHomeTeam().getName();

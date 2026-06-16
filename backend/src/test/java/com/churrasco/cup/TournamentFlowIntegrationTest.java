@@ -27,9 +27,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Test de integracion end-to-end sobre SQLite real (fichero en target/): crea jugadores,
- * sortea con numero impar, anota la liga, y verifica que la Finalissima se genera sola y
- * decide al campeon. @Transactional revierte los datos al terminar.
+ * End-to-end integration test over real SQLite (file under target/): creates players,
+ * draws with an odd count, records the league, and checks that the Finalissima is created
+ * automatically and decides the champion. @Transactional rolls back the data afterwards.
  */
 @SpringBootTest
 @TestPropertySource(properties = {
@@ -50,9 +50,9 @@ class TournamentFlowIntegrationTest {
     private EntityManager entityManager;
 
     /**
-     * Regresion: los campos Instant (created_at) deben poder releerse desde la BD.
-     * flush + clear vacia el contexto de persistencia para forzar una hidratacion real
-     * desde el ResultSet (no desde la cache de primer nivel).
+     * Regression: Instant fields (created_at) must be re-readable from the DB.
+     * flush + clear empties the persistence context to force a real hydration from the
+     * ResultSet (not from the first-level cache).
      */
     @Test
     void instantFieldsRoundTripThroughDatabase() {
@@ -75,7 +75,7 @@ class TournamentFlowIntegrationTest {
         EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Test Cup"));
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(playerIds));
 
-        // 5 jugadores (impar) -> uno fuera, 2 equipos, 2 partidos de liga (ida y vuelta).
+        // 5 players (odd) -> one sits out, 2 teams, 2 league matches (home and away).
         assertNotNull(detail.satOutPlayer(), "Con numero impar debe quedar un jugador fuera");
         assertEquals(2, detail.teams().size());
         assertEquals("TEAMS_DRAWN", detail.status());
@@ -83,15 +83,15 @@ class TournamentFlowIntegrationTest {
         List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();
         assertEquals(2, league.size());
 
-        // Anota la liga completa.
+        // Record the whole league.
         matchService.recordResult(league.get(0).id(), new MatchResultRequest(10, 5));
         EditionDetailDto afterLeague = matchService.recordResult(league.get(1).id(), new MatchResultRequest(3, 8));
 
-        // Liga completa -> la Finalissima se ha creado automaticamente.
+        // League complete -> the Finalissima has been created automatically.
         assertNotNull(afterLeague.finalissima(), "La Finalissima debe generarse al completar la liga");
         assertEquals("IN_PROGRESS", afterLeague.status());
 
-        // Anota la Finalissima -> campeon decidido y edicion FINISHED.
+        // Record the Finalissima -> champion decided and edition FINISHED.
         MatchDto finalissima = afterLeague.finalissima();
         EditionDetailDto finished =
                 matchService.recordResult(finalissima.id(), new MatchResultRequest(7, 4));

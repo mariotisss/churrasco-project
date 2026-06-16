@@ -6,14 +6,14 @@ import jakarta.persistence.Converter;
 import java.time.Instant;
 
 /**
- * Guarda los Instant como epoch-millis (entero) en SQLite.
+ * Stores Instant values as epoch-millis (integer) in SQLite.
  *
- * Motivo: el dialecto de Hibernate escribe los Instant como numero, pero el driver
- * sqlite-jdbc, al releerlos con getTimestamp, intenta parsearlos como texto de fecha y
- * falla ("Error parsing time stamp"). Convirtiendo a long evitamos por completo el manejo
- * de TIMESTAMP del driver: se usa getLong/setLong.
+ * Why: Hibernate's dialect writes Instant values as a number, but the sqlite-jdbc driver,
+ * when reading them back with getTimestamp, tries to parse them as a date string and fails
+ * ("Error parsing time stamp"). Converting to long avoids the driver's TIMESTAMP handling
+ * entirely: getLong/setLong is used instead.
  *
- * autoApply = true -> se aplica a todos los atributos Instant de las entidades.
+ * autoApply = true -> applies to every Instant attribute across the entities.
  */
 @Converter(autoApply = true)
 public class InstantEpochMilliConverter implements AttributeConverter<Instant, Long> {

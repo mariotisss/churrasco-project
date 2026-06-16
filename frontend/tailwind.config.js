@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta churrasco: brasa y carbon
+        // Churrasco palette: ember and charcoal
         ember: {
           50: '#fff7ed',
           100: '#ffedd5',

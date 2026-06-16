@@ -1,6 +1,6 @@
 package com.churrasco.cup.edition.dto;
 
-/** Fila de la clasificacion (calculada, no persistida). */
+/** A standings row (computed, not persisted). */
 public record StandingRowDto(
         int position,
         Long teamId,

@@ -12,7 +12,7 @@ export default function TeamDrawPanel({ edition }: { edition: EditionDetail }) {
   const hasTeams = edition.teams.length > 0;
   const hasResults = edition.matches.some((m) => m.status === 'PLAYED');
 
-  // Por defecto, todos los jugadores activos quedan seleccionados.
+  // By default, all active players are selected.
   useEffect(() => {
     if (activePlayers && selected === null) {
       setSelected(activePlayers.map((p) => p.id));

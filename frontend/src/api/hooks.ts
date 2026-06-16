@@ -72,12 +72,12 @@ export function useEdition(id: number) {
   return useQuery({
     queryKey: queryKeys.edition(id),
     queryFn: () => getEdition(id),
-    // El cuadro se refresca solo cada 15s (util si varios miran a la vez).
+    // The bracket refreshes itself every 15s (handy if several people are watching).
     refetchInterval: 15000,
   });
 }
 
-/** Escribe el detalle devuelto en la cache para repintar el cuadro al instante. */
+/** Writes the returned detail into the cache to repaint the bracket instantly. */
 function cacheEdition(qc: ReturnType<typeof useQueryClient>, detail: EditionDetail) {
   qc.setQueryData(queryKeys.edition(detail.id), detail);
   qc.invalidateQueries({ queryKey: queryKeys.editions });
@@ -97,7 +97,7 @@ export function useRecordResult(editionId: number) {
     mutationFn: (vars: { matchId: number; homeScore: number; awayScore: number }) =>
       recordResult(vars.matchId, vars.homeScore, vars.awayScore),
     onSuccess: (detail) => cacheEdition(qc, detail),
-    // editionId se usa para fijar el tipo del hook al detalle correcto.
+    // editionId pins the hook's type to the right edition detail.
     meta: { editionId },
   });
 }

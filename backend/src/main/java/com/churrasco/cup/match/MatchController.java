@@ -20,8 +20,8 @@ public class MatchController {
     }
 
     /**
-     * Anota el resultado de un partido. Devuelve el detalle completo de la edicion
-     * para que el frontend repinte el cuadro de una sola vez.
+     * Records a match result. Returns the full edition detail so the frontend can
+     * repaint the whole bracket in one go.
      */
     @PutMapping("/{id}/result")
     public EditionDetailDto recordResult(@PathVariable Long id,

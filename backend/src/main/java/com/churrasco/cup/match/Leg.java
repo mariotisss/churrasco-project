@@ -1,9 +1,9 @@
 package com.churrasco.cup.match;
 
-/** Fase/vuelta a la que pertenece un partido. */
+/** Phase/leg a match belongs to. */
 public enum Leg {
     IDA,
     VUELTA,
-    /** La Finalissima entre los dos primeros clasificados. */
+    /** The Finalissima between the top two teams. */
     FINAL
 }

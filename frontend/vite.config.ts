@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// En desarrollo, /api se redirige al backend Spring Boot (puerto 8080).
+// In development, /api is proxied to the Spring Boot backend (port 8080).
 export default defineConfig({
   plugins: [react()],
   server: {

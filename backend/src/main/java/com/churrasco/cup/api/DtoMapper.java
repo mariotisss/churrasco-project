@@ -8,7 +8,7 @@ import com.churrasco.cup.team.Team;
 import com.churrasco.cup.team.dto.TeamDto;
 import com.churrasco.cup.team.dto.TeamRefDto;
 
-/** Conversion entidad -> DTO. Sin estado. */
+/** Entity -> DTO conversion. Stateless. */
 public final class DtoMapper {
 
     private DtoMapper() {

@@ -8,7 +8,7 @@ import type {
 
 const api = axios.create({ baseURL: '/api' });
 
-/** Extrae el mensaje de error del backend (ApiError) para mostrarlo en la UI. */
+/** Extracts the backend error message (ApiError) to show in the UI. */
 export function apiErrorMessage(error: unknown, fallback = 'Algo ha fallado'): string {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as { message?: string } | undefined;

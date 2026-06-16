@@ -1,6 +1,6 @@
--- Esquema de Churrasco's Cup (SQLite).
--- Se ejecuta al arrancar (spring.sql.init.mode=always). Idempotente: CREATE ... IF NOT EXISTS.
--- Nota: la tabla de partidos se llama "game" porque MATCH es palabra reservada en SQLite.
+-- Churrasco's Cup schema (SQLite).
+-- Runs at startup (spring.sql.init.mode=always). Idempotent: CREATE ... IF NOT EXISTS.
+-- Note: the matches table is named "game" because MATCH is a reserved keyword in SQLite.
 
 PRAGMA journal_mode = WAL;
 
@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS player (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT    NOT NULL UNIQUE,
     active      INTEGER NOT NULL DEFAULT 1,
-    -- epoch en milisegundos (ver InstantEpochMilliConverter)
+    -- epoch in milliseconds (see InstantEpochMilliConverter)
     created_at  INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER) * 1000)
 );
 
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS game (
     away_score     INTEGER,
     status         TEXT    NOT NULL DEFAULT 'PENDING',  -- PENDING | PLAYED
     is_finalissima INTEGER NOT NULL DEFAULT 0,
-    played_at      INTEGER  -- epoch en milisegundos
+    played_at      INTEGER  -- epoch in milliseconds
 );
 
 CREATE INDEX IF NOT EXISTS idx_team_edition ON team(edition_id);

@@ -16,7 +16,7 @@ import jakarta.persistence.Table;
 
 import java.time.Instant;
 
-/** Un partido del torneo. Tabla "game" (MATCH es palabra reservada en SQLite). */
+/** A tournament match. Table "game" (MATCH is a reserved keyword in SQLite). */
 @Entity
 @Table(name = "game")
 public class Match {
@@ -72,7 +72,7 @@ public class Match {
         this.finalissima = finalissima;
     }
 
-    /** Registra el resultado y marca el partido como jugado. */
+    /** Records the result and marks the match as played. */
     public void recordResult(int homeScore, int awayScore) {
         this.homeScore = homeScore;
         this.awayScore = awayScore;

@@ -44,7 +44,7 @@ class StandingsCalculatorTest {
 
         List<StandingRowDto> table = calculator.compute(List.of(a, b, c), matches);
 
-        // A: 4 pts (V+E, gd +2). B: 3 pts (gd 0). C: 1 pt (gd -2).
+        // A: 4 pts (W+D, gd +2). B: 3 pts (gd 0). C: 1 pt (gd -2).
         assertEquals("A", table.get(0).teamName());
         assertEquals(4, table.get(0).points());
         assertEquals(2, table.get(0).goalDifference());
@@ -71,7 +71,7 @@ class StandingsCalculatorTest {
 
         List<StandingRowDto> table = calculator.compute(List.of(x, y, z), matches);
 
-        // X e Y empatan a 3 puntos; X por delante por diferencia de goles.
+        // X and Y tie on 3 points; X ahead on goal difference.
         assertEquals("X", table.get(0).teamName());
         assertEquals("Y", table.get(1).teamName());
         assertEquals("Z", table.get(2).teamName());

@@ -1,4 +1,4 @@
-# --- Build: genera los estaticos con Vite ---
+# --- Build: produces the static assets with Vite ---
 FROM node:20-alpine AS build
 WORKDIR /app
 
@@ -8,7 +8,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# --- Runtime: nginx sirve los estaticos y hace de proxy a /api ---
+# --- Runtime: nginx serves the static files and proxies /api ---
 FROM nginx:alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html

@@ -1,4 +1,4 @@
-// Tipos que reflejan los DTOs del backend.
+// Types mirroring the backend DTOs.
 
 export interface Player {
   id: number;
