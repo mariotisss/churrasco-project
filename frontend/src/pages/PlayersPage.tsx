@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import {
-  useCreatePlayer,
-  useDeletePlayer,
-  usePlayers,
-  useUpdatePlayer,
-} from '../api/hooks';
+import { useCreatePlayer, useDeletePlayer, usePlayers, useUpdatePlayer } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { Player } from '../api/types';
+import TeamCrest from '../components/TeamCrest';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function PlayersPage() {
   const { data: players, isLoading } = usePlayers(false);
   const createPlayer = useCreatePlayer();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const total = players?.length ?? 0;
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -26,53 +25,69 @@ export default function PlayersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-800">Jugadores</h1>
-        <p className="text-sm text-stone-500">
-          Da de alta a la plantilla habitual. Los inactivos no entran en el sorteo por defecto.
-        </p>
-      </div>
+    <div className="animate-fade-in space-y-8">
+      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="eyebrow">La plantilla</p>
+          <h1 className="mt-2 font-display text-5xl uppercase leading-none tracking-tight text-white sm:text-6xl">
+            Jugadores
+          </h1>
+        </div>
+        <form onSubmit={handleAdd} className="flex w-full max-w-sm flex-col gap-2 sm:w-auto">
+          <div className="flex items-center gap-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nombre del jugador"
+              className="input w-full sm:w-52"
+            />
+            <button type="submit" disabled={createPlayer.isPending} className="btn-primary shrink-0">
+              <span className="text-base leading-none">+</span> Añadir
+            </button>
+          </div>
+          {error && <p className="text-sm text-rose-400">{error}</p>}
+        </form>
+      </header>
 
-      <form onSubmit={handleAdd} className="flex flex-wrap items-center gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre del jugador"
-          className="flex-1 rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-ember-500 focus:outline-none focus:ring-1 focus:ring-ember-500"
-        />
-        <button
-          type="submit"
-          disabled={createPlayer.isPending}
-          className="rounded-md bg-ember-600 px-4 py-2 text-sm font-semibold text-white hover:bg-ember-700 disabled:opacity-50"
-        >
-          Añadir
-        </button>
-      </form>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <section>
+        <h2 className="lower-third mb-4">
+          Plantilla
+          {total > 0 && (
+            <span className="ml-1 font-condensed text-xs font-semibold text-zinc-600">{total}</span>
+          )}
+        </h2>
 
-      <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
         {isLoading ? (
-          <p className="p-4 text-sm text-stone-500">Cargando…</p>
-        ) : !players || players.length === 0 ? (
-          <p className="p-4 text-sm text-stone-500">Aún no hay jugadores.</p>
+          <p className="panel p-6 text-sm text-zinc-500">Cargando…</p>
+        ) : total === 0 ? (
+          <div className="panel flex flex-col items-center px-6 py-16 text-center">
+            <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-coal-800 text-3xl shadow-inset-hi">
+              👥
+            </div>
+            <p className="font-display text-xl uppercase tracking-tight text-zinc-200">
+              Aún no hay jugadores
+            </p>
+            <p className="mt-1 text-sm text-zinc-500">Añade a la plantilla habitual para empezar.</p>
+          </div>
         ) : (
-          <ul className="divide-y divide-stone-100">
-            {players.map((player) => (
-              <PlayerRow key={player.id} player={player} />
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {(players ?? []).map((player) => (
+              <PlayerCard key={player.id} player={player} />
             ))}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }
 
-function PlayerRow({ player }: { player: Player }) {
+function PlayerCard({ player }: { player: Player }) {
   const updatePlayer = useUpdatePlayer();
   const deletePlayer = useDeletePlayer();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(player.name);
+  const [confirming, setConfirming] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function saveName() {
     const trimmed = draft.trim();
@@ -82,49 +97,67 @@ function PlayerRow({ player }: { player: Player }) {
     setEditing(false);
   }
 
+  function openConfirm() {
+    setDeleteError(null);
+    setConfirming(true);
+  }
+
+  function confirmDelete() {
+    setDeleteError(null);
+    deletePlayer.mutate(player.id, {
+      onSuccess: () => setConfirming(false),
+      onError: (err) => setDeleteError(apiErrorMessage(err)),
+    });
+  }
+
   return (
-    <li className="flex items-center justify-between gap-3 px-4 py-3">
+    <li className="panel p-4">
       <div className="flex items-center gap-3">
-        <span
-          className={`h-2 w-2 rounded-full ${player.active ? 'bg-emerald-500' : 'bg-stone-300'}`}
-          title={player.active ? 'Activo' : 'Inactivo'}
-        />
-        {editing ? (
-          <input
-            value={draft}
-            autoFocus
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={saveName}
-            onKeyDown={(e) => e.key === 'Enter' && saveName()}
-            className="rounded border border-stone-300 px-2 py-1 text-sm"
-          />
-        ) : (
-          <span className={`text-sm font-medium ${player.active ? 'text-stone-800' : 'text-stone-400 line-through'}`}>
-            {player.name}
-          </span>
-        )}
+        <TeamCrest name={player.name} size="lg" />
+        <div className="min-w-0 flex-1">
+          {editing ? (
+            <input
+              value={draft}
+              autoFocus
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={(e) => e.key === 'Enter' && saveName()}
+              className="input w-full py-1.5"
+            />
+          ) : (
+            <p className="truncate text-base font-semibold text-zinc-100">{player.name}</p>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 text-xs">
-        <button onClick={() => setEditing(true)} className="text-stone-500 hover:text-ember-600">
+      <div className="mt-3 flex items-center gap-1.5 border-t border-coal-800/80 pt-3">
+        <button onClick={() => setEditing(true)} className="btn-ghost text-xs">
           Editar
         </button>
-        {player.active ? (
-          <button
-            onClick={() => deletePlayer.mutate(player.id)}
-            className="rounded bg-stone-100 px-2 py-1 font-medium text-stone-600 hover:bg-stone-200"
-          >
-            Desactivar
-          </button>
-        ) : (
-          <button
-            onClick={() => updatePlayer.mutate({ id: player.id, active: true })}
-            className="rounded bg-emerald-50 px-2 py-1 font-medium text-emerald-700 hover:bg-emerald-100"
-          >
-            Reactivar
-          </button>
-        )}
+        <span className="flex-1" />
+        <button
+          onClick={openConfirm}
+          className="rounded-lg border border-coal-700 px-2.5 py-1.5 font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-400 transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
+        >
+          Eliminar
+        </button>
       </div>
+
+      <ConfirmDialog
+        open={confirming}
+        title="Eliminar jugador"
+        message={
+          <>
+            ¿Seguro que quieres eliminar a{' '}
+            <span className="font-semibold text-zinc-200">{player.name}</span>? Esta acción no se
+            puede deshacer.
+          </>
+        }
+        loading={deletePlayer.isPending}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onClose={() => setConfirming(false)}
+      />
     </li>
   );
 }

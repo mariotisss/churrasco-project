@@ -1,7 +1,110 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-stone-100 text-stone-800;
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-coal-950 font-sans text-zinc-300;
+    /* A faint warm tint at the top — not a glow. */
+    background-image:
+      radial-gradient(1100px 560px at 88% -22%, rgba(249, 115, 22, 0.05), transparent 58%),
+      radial-gradient(820px 520px at -10% -8%, rgba(234, 88, 12, 0.035), transparent 54%);
+    background-attachment: fixed;
+  }
+
+  /* Fine film grain so the flat charcoal reads like a broadcast, not a blank panel. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Strip number-input spinners for cleaner score boxes. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  ::selection {
+    background-color: rgba(249, 115, 22, 0.3);
+    color: #fff;
+  }
+}
+
+@layer components {
+  /* ---- Surfaces -------------------------------------------------------- */
+  /* The base broadcast panel: charcoal with a lit top hairline. */
+  .panel {
+    @apply relative overflow-hidden rounded-2xl border border-coal-700/60 bg-gradient-to-b from-coal-850/90 to-coal-900/95 shadow-card;
+  }
+  .panel::before {
+    content: '';
+    @apply pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent;
+  }
+
+  /* Legacy alias so any leftover markup keeps its styling. */
+  .card {
+    @apply relative overflow-hidden rounded-2xl border border-coal-700/60 bg-gradient-to-b from-coal-850/90 to-coal-900/95 shadow-card;
+  }
+
+  /* ---- Typography helpers --------------------------------------------- */
+  .eyebrow {
+    @apply font-condensed text-xs font-semibold uppercase tracking-broadcast text-ember-400;
+  }
+
+  /* Section label with the broadcast "lower-third" leading bar. */
+  .lower-third {
+    @apply flex items-center gap-2.5 font-condensed text-sm font-bold uppercase tracking-[0.18em] text-zinc-300;
+  }
+  .lower-third::before {
+    content: '';
+    @apply h-4 w-1.5 rounded-sm bg-gradient-to-b from-ember-400 to-ember-600 shadow-glow-sm;
+  }
+
+  /* ---- Controls -------------------------------------------------------- */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-ember-500 to-ember-600 px-4 py-2.5 font-condensed text-sm font-bold uppercase tracking-wider text-white shadow-glow-sm transition hover:from-ember-400 hover:to-ember-500 hover:shadow-glow active:scale-[0.98] disabled:cursor-not-allowed disabled:from-coal-700 disabled:to-coal-700 disabled:text-zinc-500 disabled:shadow-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 font-condensed text-sm font-semibold uppercase tracking-wide text-zinc-400 transition hover:bg-white/5 hover:text-zinc-100;
+  }
+
+  .input {
+    @apply rounded-xl border border-coal-700 bg-coal-950/70 px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 transition focus:border-ember-500 focus:outline-none focus:ring-2 focus:ring-ember-500/30;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-coal-700 bg-coal-850/80 px-2.5 py-1 font-condensed text-xs font-semibold uppercase tracking-wider text-zinc-400;
+  }
+
+  /* The LED-style score readout. Uses Anton for chunky broadcast digits. */
+  .scoreboard {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-white/[0.07] bg-coal-975 px-3 py-1.5 font-display leading-none tabular-nums text-white shadow-inset-hi;
+  }
+}
+
+@layer utilities {
+  /* A single light streak that sweeps across an element (hero / champion). */
+  .sweep-mask {
+    -webkit-mask-image: linear-gradient(black, black);
+    mask-image: linear-gradient(black, black);
+  }
 }

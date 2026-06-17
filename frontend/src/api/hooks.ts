@@ -12,12 +12,14 @@ import {
   getEdition,
   getEditions,
   getPlayers,
+  getPlayerStandings,
   recordResult,
   updatePlayer,
 } from './client';
 
 export const queryKeys = {
   players: (activeOnly: boolean) => ['players', { activeOnly }] as const,
+  playerStandings: ['playerStandings'] as const,
   editions: ['editions'] as const,
   edition: (id: number) => ['edition', id] as const,
 };
@@ -27,6 +29,13 @@ export function usePlayers(activeOnly = false) {
   return useQuery({
     queryKey: queryKeys.players(activeOnly),
     queryFn: () => getPlayers(activeOnly),
+  });
+}
+
+export function usePlayerStandings() {
+  return useQuery({
+    queryKey: queryKeys.playerStandings,
+    queryFn: getPlayerStandings,
   });
 }
 
@@ -81,6 +90,8 @@ export function useEdition(id: number) {
 function cacheEdition(qc: ReturnType<typeof useQueryClient>, detail: EditionDetail) {
   qc.setQueryData(queryKeys.edition(detail.id), detail);
   qc.invalidateQueries({ queryKey: queryKeys.editions });
+  // A recorded Finalissima can crown a champion, which changes the player ranking.
+  qc.invalidateQueries({ queryKey: queryKeys.playerStandings });
 }
 
 export function useDrawTeams(editionId: number) {

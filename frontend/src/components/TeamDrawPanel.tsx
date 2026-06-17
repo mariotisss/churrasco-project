@@ -37,50 +37,58 @@ export default function TeamDrawPanel({ edition }: { edition: EditionDetail }) {
   const canDraw = selectedCount >= 4;
 
   return (
-    <div className="space-y-3 rounded-lg border border-stone-200 bg-white p-4">
+    <div className="panel space-y-4 p-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-stone-800">Sorteo de equipos</h2>
-        {hasTeams && (
-          <span className="text-xs text-stone-400">
-            {edition.teams.length} equipos
-          </span>
-        )}
+        <h2 className="lower-third">
+          <span className="-ml-1 text-base">🎲</span> Sorteo de equipos
+        </h2>
+        {hasTeams && <span className="chip">{edition.teams.length} equipos</span>}
       </div>
 
       {edition.satOutPlayer && (
-        <p className="rounded bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          🎲 Número impar: <strong>{edition.satOutPlayer.name}</strong> se queda fuera esta edición.
+        <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200">
+          🎲 Número impar:{' '}
+          <strong className="font-semibold text-amber-100">{edition.satOutPlayer.name}</strong> se
+          queda fuera esta edición.
         </p>
       )}
 
       {!hasTeams && (
         <>
-          <p className="text-sm text-stone-500">
-            ¿Quién se presenta este mes? (mínimo 4 jugadores)
+          <p className="text-sm text-zinc-400">
+            ¿Quién se presenta este mes?{' '}
+            <span className="font-condensed font-semibold uppercase tracking-wide text-zinc-500">
+              (mínimo 4)
+            </span>
           </p>
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
             {(activePlayers ?? []).map((player) => {
               const checked = selected?.includes(player.id) ?? false;
               return (
-                <label
+                <button
+                  type="button"
                   key={player.id}
-                  className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1.5 text-sm ${
-                    checked ? 'border-ember-300 bg-ember-50' : 'border-stone-200'
+                  onClick={() => toggle(player.id)}
+                  className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-sm transition ${
+                    checked
+                      ? 'border-ember-500/50 bg-ember-500/15 text-ember-200'
+                      : 'border-coal-700 bg-coal-950/50 text-zinc-400 hover:border-coal-600'
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggle(player.id)}
-                    className="accent-ember-600"
-                  />
-                  <span className="truncate">{player.name}</span>
-                </label>
+                  <span
+                    className={`grid h-4 w-4 shrink-0 place-items-center rounded border text-[10px] ${
+                      checked ? 'border-ember-400 bg-ember-500 text-white' : 'border-coal-600'
+                    }`}
+                  >
+                    {checked ? '✓' : ''}
+                  </span>
+                  <span className="truncate font-medium">{player.name}</span>
+                </button>
               );
             })}
           </div>
           {(activePlayers?.length ?? 0) === 0 && (
-            <p className="text-sm text-stone-400">
+            <p className="text-sm text-zinc-500">
               No hay jugadores activos. Añádelos en la pestaña Jugadores.
             </p>
           )}
@@ -88,8 +96,8 @@ export default function TeamDrawPanel({ edition }: { edition: EditionDetail }) {
       )}
 
       {hasTeams && hasResults && (
-        <p className="text-sm text-stone-500">
-          Ya hay resultados anotados: el sorteo está bloqueado para no alterar la competición.
+        <p className="rounded-xl border border-coal-700 bg-coal-950/50 px-3 py-2.5 text-sm text-zinc-400">
+          🔒 Ya hay resultados anotados: el sorteo está bloqueado para no alterar la competición.
         </p>
       )}
 
@@ -97,7 +105,7 @@ export default function TeamDrawPanel({ edition }: { edition: EditionDetail }) {
         <button
           onClick={handleDraw}
           disabled={!canDraw || drawTeams.isPending}
-          className="rounded-md bg-ember-600 px-4 py-2 text-sm font-semibold text-white hover:bg-ember-700 disabled:opacity-50"
+          className="btn-primary w-full"
         >
           {drawTeams.isPending
             ? 'Sorteando…'
@@ -108,9 +116,11 @@ export default function TeamDrawPanel({ edition }: { edition: EditionDetail }) {
       )}
 
       {!canDraw && !hasTeams && (
-        <p className="text-xs text-stone-400">Selecciona al menos 4 jugadores.</p>
+        <p className="font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          Selecciona al menos 4 jugadores
+        </p>
       )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-rose-400">{error}</p>}
     </div>
   );
 }

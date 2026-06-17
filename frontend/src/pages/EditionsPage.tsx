@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCreateEdition, useEditions } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
+import { featuredEditionId, palmares } from '../lib/tournament';
+import type { EditionSummary } from '../api/types';
 import StatusBadge from '../components/StatusBadge';
+import TeamCrest from '../components/TeamCrest';
+import FeaturedEdition from '../components/FeaturedEdition';
 
 function defaultEditionName() {
   const now = new Date();
@@ -27,58 +31,130 @@ export default function EditionsPage() {
     });
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-800">Ediciones</h1>
-        <p className="text-sm text-stone-500">Cada mes, una nueva Churrasco&apos;s Cup.</p>
-      </div>
+  const featuredId = editions ? featuredEditionId(editions) : null;
+  const champions = editions ? palmares(editions) : [];
 
-      <form onSubmit={handleCreate} className="flex flex-wrap items-center gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre de la edición"
-          className="flex-1 rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-ember-500 focus:outline-none focus:ring-1 focus:ring-ember-500"
-        />
-        <button
-          type="submit"
-          disabled={createEdition.isPending}
-          className="rounded-md bg-ember-600 px-4 py-2 text-sm font-semibold text-white hover:bg-ember-700 disabled:opacity-50"
-        >
-          Nueva edición
-        </button>
-      </form>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+  return (
+    <div className="animate-fade-in space-y-10">
+      {/* Page header + create */}
+      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="eyebrow">Temporada {new Date().getFullYear()}</p>
+          <h1 className="mt-2 font-display text-5xl uppercase leading-none tracking-tight text-white sm:text-6xl">
+            Ediciones
+          </h1>
+        </div>
+        <form onSubmit={handleCreate} className="flex w-full max-w-sm flex-col gap-2 sm:w-auto">
+          <div className="flex items-center gap-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nombre de la edición"
+              className="input w-full sm:w-52"
+            />
+            <button type="submit" disabled={createEdition.isPending} className="btn-primary shrink-0">
+              <span className="text-base leading-none">+</span> Crear
+            </button>
+          </div>
+          {error && <p className="text-sm text-rose-400">{error}</p>}
+        </form>
+      </header>
 
       {isLoading ? (
-        <p className="text-sm text-stone-500">Cargando…</p>
+        <div className="h-56 animate-pulse rounded-3xl border border-coal-700/60 bg-coal-900/50" />
       ) : !editions || editions.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-stone-300 p-6 text-center text-sm text-stone-500">
-          Todavía no hay ediciones. ¡Crea la primera!
-        </p>
+        <EmptyState />
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {editions.map((edition) => (
-            <li key={edition.id}>
-              <Link
-                to={`/editions/${edition.id}`}
-                className="block rounded-lg border border-stone-200 bg-white p-4 shadow-sm transition hover:border-ember-300 hover:shadow"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-stone-800">{edition.name}</span>
-                  <StatusBadge status={edition.status} />
-                </div>
-                {edition.champion ? (
-                  <p className="mt-2 text-sm text-emerald-700">🏆 {edition.champion.name}</p>
-                ) : (
-                  <p className="mt-2 text-sm text-stone-400">Sin campeón todavía</p>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <>
+          {/* Featured live edition */}
+          {featuredId && <FeaturedEdition editionId={featuredId} />}
+
+          {/* Palmarés */}
+          {champions.length > 0 && (
+            <section>
+              <h2 className="lower-third mb-4">Palmarés</h2>
+              <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
+                {champions.map((e) => (
+                  <Link
+                    key={e.id}
+                    to={`/editions/${e.id}`}
+                    className="group flex min-w-[200px] items-center gap-3 rounded-2xl border border-coal-700/60 bg-gradient-to-br from-coal-850/90 to-coal-900/95 p-4 shadow-card transition hover:border-emerald-500/40"
+                  >
+                    <span className="relative">
+                      <TeamCrest name={e.champion!.name} size="lg" />
+                      <span className="absolute -right-1.5 -top-1.5 text-base">🏆</span>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-semibold text-white">
+                        {e.champion!.name}
+                      </p>
+                      <p className="truncate text-xs font-medium text-zinc-500">
+                        {e.name}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Archive */}
+          <section>
+            <h2 className="lower-third mb-4">
+              Todas las ediciones
+              <span className="ml-1 font-condensed text-xs font-semibold text-zinc-600">
+                {editions.length}
+              </span>
+            </h2>
+            <div className="panel divide-y divide-coal-800/70">
+              {editions.map((edition, i) => (
+                <ArchiveRow key={edition.id} edition={edition} index={editions.length - i} />
+              ))}
+            </div>
+          </section>
+        </>
       )}
+    </div>
+  );
+}
+
+function ArchiveRow({ edition, index }: { edition: EditionSummary; index: number }) {
+  return (
+    <Link
+      to={`/editions/${edition.id}`}
+      className="group flex items-center gap-4 px-4 py-3.5 transition hover:bg-white/[0.03] sm:px-5"
+    >
+      <span className="w-8 shrink-0 text-center font-display text-xl leading-none tabular-nums text-white/15 transition group-hover:text-ember-500/40">
+        {String(index).padStart(2, '0')}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-display text-xl uppercase leading-none tracking-tight text-white transition group-hover:text-ember-300">
+          {edition.name}
+        </p>
+        {edition.champion && (
+          <p className="mt-1 truncate font-condensed text-xs font-semibold uppercase tracking-wide text-emerald-400">
+            🏆 {edition.champion.name}
+          </p>
+        )}
+      </div>
+      <StatusBadge status={edition.status} />
+      <span className="hidden font-condensed text-xs font-bold uppercase tracking-wider text-zinc-600 transition group-hover:translate-x-0.5 group-hover:text-ember-400 sm:inline">
+        Ver →
+      </span>
+    </Link>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="panel flex flex-col items-center px-6 py-16 text-center">
+      <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-coal-800 text-3xl shadow-inset-hi">
+        🏆
+      </div>
+      <p className="font-condensed text-lg font-bold uppercase tracking-wide text-zinc-300">
+        Todavía no hay ediciones
+      </p>
+      <p className="mt-1 text-sm text-zinc-500">Crea la primera y arranca la temporada.</p>
     </div>
   );
 }

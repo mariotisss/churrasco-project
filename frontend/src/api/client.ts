@@ -3,6 +3,7 @@ import type {
   EditionDetail,
   EditionSummary,
   Player,
+  PlayerStanding,
   StandingRow,
 } from './types';
 
@@ -38,6 +39,11 @@ export async function updatePlayer(
 
 export async function deletePlayer(id: number): Promise<void> {
   await api.delete(`/players/${id}`);
+}
+
+export async function getPlayerStandings(): Promise<PlayerStanding[]> {
+  const { data } = await api.get<PlayerStanding[]>('/players/standings');
+  return data;
 }
 
 // --- Editions ---

@@ -2,6 +2,7 @@ package com.churrasco.cup.player;
 
 import com.churrasco.cup.player.dto.CreatePlayerRequest;
 import com.churrasco.cup.player.dto.PlayerDto;
+import com.churrasco.cup.player.dto.PlayerStandingDto;
 import com.churrasco.cup.player.dto.UpdatePlayerRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,12 @@ public class PlayerController {
         return service.list(activeOnly);
     }
 
+    /** All-time player ranking (champion = 2 pts, runner-up = 1 pt per edition). */
+    @GetMapping("/standings")
+    public List<PlayerStandingDto> standings() {
+        return service.standings();
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PlayerDto create(@Valid @RequestBody CreatePlayerRequest request) {
@@ -46,7 +53,7 @@ public class PlayerController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deactivate(@PathVariable Long id) {
-        service.deactivate(id);
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

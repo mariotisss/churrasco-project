@@ -1,5 +1,6 @@
 import type { MatchDto, TeamRef } from '../api/types';
 import { MatchRow } from './FixturesList';
+import TeamCrest from './TeamCrest';
 
 export default function FinalissimaBox({
   finalissima,
@@ -13,27 +14,59 @@ export default function FinalissimaBox({
   const decided = finalissima.status === 'PLAYED';
 
   return (
-    <div className="rounded-xl border-2 border-ember-300 bg-gradient-to-br from-ember-50 to-amber-50 p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="text-xl">🔥</span>
-        <h2 className="text-lg font-bold text-ember-800">Finalissima</h2>
-      </div>
+    <div className="relative overflow-hidden rounded-2xl border border-ember-500/40 bg-gradient-to-b from-coal-850/90 to-coal-900/95 shadow-card">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ember-400/40 to-transparent" />
 
-      {decided && champion ? (
-        <div className="space-y-3">
-          <div className="text-center text-sm tabular-nums text-stone-600">
-            {finalissima.homeTeam.name} <strong>{finalissima.homeScore}</strong>
-            {' - '}
-            <strong>{finalissima.awayScore}</strong> {finalissima.awayTeam.name}
-          </div>
-          <div className="rounded-lg bg-emerald-100 px-4 py-3 text-center">
-            <p className="text-xs uppercase tracking-wide text-emerald-700">Campeón</p>
-            <p className="text-xl font-extrabold text-emerald-800">🏆 {champion.name}</p>
-          </div>
+      <div className="relative p-5">
+        <div className="mb-5 border-l-2 border-ember-500 pl-3">
+          <h2 className="font-display text-2xl uppercase leading-none tracking-tight text-white">
+            Finalissima
+          </h2>
+          <p className="mt-1 font-condensed text-[11px] font-semibold uppercase tracking-broadcast text-ember-400/90">
+            El partido por el título
+          </p>
         </div>
-      ) : (
-        <MatchRow match={finalissima} editionId={editionId} />
-      )}
+
+        {decided && champion ? (
+          <div className="space-y-4">
+            {/* Final scoreline */}
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-coal-700/60 bg-coal-950/50 px-4 py-3">
+              <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
+                <span className="truncate text-sm font-semibold text-zinc-200">
+                  {finalissima.homeTeam.name}
+                </span>
+                <TeamCrest name={finalissima.homeTeam.name} size="sm" />
+              </span>
+              <span className="scoreboard text-xl">
+                <span>{finalissima.homeScore}</span>
+                <span className="text-coal-600">:</span>
+                <span>{finalissima.awayScore}</span>
+              </span>
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <TeamCrest name={finalissima.awayTeam.name} size="sm" />
+                <span className="truncate text-sm font-semibold text-zinc-200">
+                  {finalissima.awayTeam.name}
+                </span>
+              </span>
+            </div>
+
+            {/* Champion reveal */}
+            <div className="relative overflow-hidden rounded-xl border border-emerald-500/40 bg-gradient-to-b from-emerald-500/15 to-emerald-500/5 px-4 py-5 text-center">
+              <p className="font-condensed text-xs font-bold uppercase tracking-broadcast text-emerald-400">
+                Campeón
+              </p>
+              <p className="mt-2 flex items-center justify-center gap-2 font-display text-3xl uppercase leading-none tracking-tight text-white">
+                <span>🏆</span>
+                {champion.name}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ul className="overflow-hidden rounded-xl border border-coal-700/60 bg-coal-950/40">
+            <MatchRow match={finalissima} editionId={editionId} />
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

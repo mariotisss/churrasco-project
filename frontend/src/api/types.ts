@@ -59,6 +59,14 @@ export interface EditionSummary {
   champion: TeamRef | null;
 }
 
+export interface PlayerStanding {
+  playerId: number;
+  name: string;
+  points: number;
+  championships: number;
+  runnerUps: number;
+}
+
 export interface EditionDetail {
   id: number;
   name: string;

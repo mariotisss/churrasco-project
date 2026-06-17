@@ -7,4 +7,7 @@ import java.util.List;
 public interface EditionRepository extends JpaRepository<Edition, Long> {
 
     List<Edition> findAllByOrderByCreatedAtDescIdDesc();
+
+    /** Whether a player sat out in any edition. Used to protect history on delete. */
+    boolean existsBySatOutPlayerId(Long satOutPlayerId);
 }
