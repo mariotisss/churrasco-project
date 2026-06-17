@@ -15,8 +15,9 @@ services:
     depends_on:
       - backend
     ports:
-      # The app is reachable at http://localhost:8080
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
+    expose:
+      - "80"
     restart: unless-stopped
 
 volumes:
