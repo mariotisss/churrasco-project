@@ -7,6 +7,8 @@ import com.churrasco.cup.edition.Edition;
 import com.churrasco.cup.edition.EditionRepository;
 import com.churrasco.cup.match.Match;
 import com.churrasco.cup.match.MatchRepository;
+import com.churrasco.cup.penalty.Penalty;
+import com.churrasco.cup.penalty.PenaltyRepository;
 import com.churrasco.cup.player.dto.CreatePlayerRequest;
 import com.churrasco.cup.player.dto.PlayerDto;
 import com.churrasco.cup.player.dto.PlayerStandingDto;
@@ -32,16 +34,19 @@ public class PlayerService {
     private final TeamRepository teamRepository;
     private final EditionRepository editionRepository;
     private final MatchRepository matchRepository;
+    private final PenaltyRepository penaltyRepository;
 
     public PlayerService(
             PlayerRepository repository,
             TeamRepository teamRepository,
             EditionRepository editionRepository,
-            MatchRepository matchRepository) {
+            MatchRepository matchRepository,
+            PenaltyRepository penaltyRepository) {
         this.repository = repository;
         this.teamRepository = teamRepository;
         this.editionRepository = editionRepository;
         this.matchRepository = matchRepository;
+        this.penaltyRepository = penaltyRepository;
     }
 
     @Transactional(readOnly = true)
@@ -100,15 +105,24 @@ public class PlayerService {
     }
 
     /**
-     * All-time player ranking. Every decided edition awards CHAMPION_POINTS to each player of
-     * the winning team and RUNNER_UP_POINTS to each player of the runner-up (the Finalissima
-     * loser). Sorted by points, then titles, then name.
+     * All-time player ranking. The whole roster appears (even players with no points yet).
+     * Every decided edition awards CHAMPION_POINTS to each player of the winning team and
+     * RUNNER_UP_POINTS to each player of the runner-up (the Finalissima loser); manual
+     * penalties are then subtracted. Sorted by net points, then titles, then name.
      */
     @Transactional(readOnly = true)
     public List<PlayerStandingDto> standings() {
         Map<Long, Accumulator> byPlayer = new LinkedHashMap<>();
 
+        // Seed every player so the ranking shows the whole roster, even at 0 points.
+        for (Player player : repository.findAllByOrderByNameAsc()) {
+            byPlayer.put(player.getId(), new Accumulator(player));
+        }
+
         for (Edition edition : editionRepository.findAll()) {
+            if (edition.isTest()) {
+                continue; // sandbox edition: never affects the all-time ranking
+            }
             Long championTeamId = edition.getChampionTeamId();
             if (championTeamId == null) {
                 continue; // edition not decided yet
@@ -123,6 +137,15 @@ public class PlayerService {
             if (runnerUp != null) {
                 award(byPlayer, runnerUp, RUNNER_UP_POINTS, false);
             }
+        }
+
+        for (Penalty penalty : penaltyRepository.findAll()) {
+            Player player = penalty.getPlayer();
+            if (player == null) {
+                continue;
+            }
+            Accumulator acc = byPlayer.computeIfAbsent(player.getId(), k -> new Accumulator(player));
+            acc.penaltyPoints += penalty.getPoints();
         }
 
         return byPlayer.values().stream()
@@ -178,13 +201,15 @@ public class PlayerService {
         private int points;
         private int championships;
         private int runnerUps;
+        private int penaltyPoints;
 
         Accumulator(Player player) {
             this.player = player;
         }
 
         PlayerStandingDto toDto() {
-            return new PlayerStandingDto(player.getId(), player.getName(), points, championships, runnerUps);
+            return new PlayerStandingDto(player.getId(), player.getName(),
+                    points - penaltyPoints, championships, runnerUps, penaltyPoints);
         }
     }
 }

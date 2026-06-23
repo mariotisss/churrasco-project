@@ -72,7 +72,7 @@ class TournamentFlowIntegrationTest {
             playerIds.add(playerService.create(new CreatePlayerRequest(name)).id());
         }
 
-        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Test Cup"));
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Test Cup", false));
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(playerIds));
 
         // 5 players (odd) -> one sits out, 2 teams, 2 league matches (home and away).
@@ -107,7 +107,7 @@ class TournamentFlowIntegrationTest {
         for (String name : List.of("Uno", "Dos", "Tres", "Cuatro")) {
             playerIds.add(playerService.create(new CreatePlayerRequest(name)).id());
         }
-        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Empate Cup"));
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Empate Cup", false));
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(playerIds));
 
         List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();

@@ -42,6 +42,10 @@ public class Edition {
     @Column(name = "champion_team_id")
     private Long championTeamId;
 
+    /** Sandbox edition: kept out of the all-time ranking and the home spotlight. */
+    @Column(name = "is_test", nullable = false)
+    private boolean test = false;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -50,6 +54,11 @@ public class Edition {
 
     public Edition(String name) {
         this.name = name;
+    }
+
+    public Edition(String name, boolean test) {
+        this.name = name;
+        this.test = test;
     }
 
     public Long getId() {
@@ -86,6 +95,14 @@ public class Edition {
 
     public void setChampionTeamId(Long championTeamId) {
         this.championTeamId = championTeamId;
+    }
+
+    public boolean isTest() {
+        return test;
+    }
+
+    public void setTest(boolean test) {
+        this.test = test;
     }
 
     public Instant getCreatedAt() {

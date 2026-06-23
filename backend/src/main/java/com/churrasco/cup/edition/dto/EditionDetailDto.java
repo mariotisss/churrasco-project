@@ -12,6 +12,7 @@ public record EditionDetailDto(
         Long id,
         String name,
         String status,
+        boolean test,
         PlayerDto satOutPlayer,
         TeamRefDto champion,
         List<TeamDto> teams,

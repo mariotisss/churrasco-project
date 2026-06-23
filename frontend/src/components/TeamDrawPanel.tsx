@@ -3,7 +3,13 @@ import { useDrawTeams, usePlayers } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { EditionDetail } from '../api/types';
 
-export default function TeamDrawPanel({ edition }: { edition: EditionDetail }) {
+export default function TeamDrawPanel({
+  edition,
+  onDrawn,
+}: {
+  edition: EditionDetail;
+  onDrawn?: () => void;
+}) {
   const { data: activePlayers } = usePlayers(true);
   const drawTeams = useDrawTeams(edition.id);
   const [selected, setSelected] = useState<number[] | null>(null);
@@ -29,6 +35,7 @@ export default function TeamDrawPanel({ edition }: { edition: EditionDetail }) {
   function handleDraw() {
     setError(null);
     drawTeams.mutate(selected ?? undefined, {
+      onSuccess: () => onDrawn?.(),
       onError: (err) => setError(apiErrorMessage(err)),
     });
   }

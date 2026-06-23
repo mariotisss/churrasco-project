@@ -2,6 +2,8 @@ package com.churrasco.cup.api;
 
 import com.churrasco.cup.match.Match;
 import com.churrasco.cup.match.dto.MatchDto;
+import com.churrasco.cup.penalty.Penalty;
+import com.churrasco.cup.penalty.dto.PenaltyDto;
 import com.churrasco.cup.player.Player;
 import com.churrasco.cup.player.dto.PlayerDto;
 import com.churrasco.cup.team.Team;
@@ -34,6 +36,21 @@ public final class DtoMapper {
         }
         return new TeamDto(t.getId(), t.getName(),
                 toPlayerDto(t.getPlayer1()), toPlayerDto(t.getPlayer2()));
+    }
+
+    public static PenaltyDto toPenaltyDto(Penalty p) {
+        if (p == null) {
+            return null;
+        }
+        Player player = p.getPlayer();
+        return new PenaltyDto(
+                p.getId(),
+                player != null ? player.getId() : null,
+                player != null ? player.getName() : null,
+                p.getPoints(),
+                p.getReason(),
+                p.getCreatedAt()
+        );
     }
 
     public static MatchDto toMatchDto(Match m) {

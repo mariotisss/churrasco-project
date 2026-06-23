@@ -1,5 +1,15 @@
 import type { EditionDetail } from '../api/types';
+import { leagueProgress } from '../lib/tournament';
 import TeamCrest from './TeamCrest';
+
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function StageLabel({ children, tone = 'default' }: { children: React.ReactNode; tone?: 'default' | 'ember' }) {
   return (
@@ -78,15 +88,20 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
   const fin = detail.finalissima;
   const champ = detail.champion;
 
-  const homeName = fin?.homeTeam.name ?? s0?.teamName ?? null;
-  const awayName = fin?.awayTeam.name ?? s1?.teamName ?? null;
+  // The final phase (finalists + champion) only makes sense once the league is over.
+  const { played, total } = leagueProgress(detail);
+  const leagueDone = total > 0 && played === total;
+  const showFinalists = leagueDone || !!fin;
+
+  const homeName = showFinalists ? fin?.homeTeam.name ?? s0?.teamName ?? null : null;
+  const awayName = showFinalists ? fin?.awayTeam.name ?? s1?.teamName ?? null : null;
   const decided = fin?.status === 'PLAYED';
 
   return (
     <div className="panel p-5 sm:p-6">
       <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
         {/* Qualifiers */}
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <StageLabel>Clasificados · Liga</StageLabel>
           <div className="space-y-2.5">
             <SeedCard
@@ -107,44 +122,58 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
         <Chevron />
 
         {/* Finalissima */}
-        <div className="flex-1">
-          <StageLabel tone="ember">Finalissima</StageLabel>
-          <div className="rounded-xl border border-ember-500/40 bg-gradient-to-b from-ember-500/10 to-coal-950/50 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex min-w-0 flex-1 items-center gap-2">
-                <TeamCrest name={homeName ?? '—'} size="sm" />
-                <span className="truncate text-[13px] font-semibold text-zinc-200">
-                  {homeName ?? 'Por definir'}
+        <div className="min-w-0 flex-1">
+          <StageLabel tone={showFinalists ? 'ember' : 'default'}>Finalissima</StageLabel>
+          {showFinalists ? (
+            <div className="rounded-xl border border-ember-500/40 bg-gradient-to-b from-ember-500/10 to-coal-950/50 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 flex-1 items-center gap-2">
+                  <TeamCrest name={homeName ?? '—'} size="sm" />
+                  <span className="truncate text-[13px] font-semibold text-zinc-200">
+                    {homeName ?? 'Por definir'}
+                  </span>
                 </span>
-              </span>
-              {decided ? (
-                <span className="scoreboard text-base">
-                  <span>{fin!.homeScore}</span>
-                  <span className="text-coal-600">:</span>
-                  <span>{fin!.awayScore}</span>
+                {decided ? (
+                  <span className="scoreboard text-base">
+                    <span>{fin!.homeScore}</span>
+                    <span className="text-coal-600">:</span>
+                    <span>{fin!.awayScore}</span>
+                  </span>
+                ) : (
+                  <span className="font-display text-sm text-ember-400">VS</span>
+                )}
+                <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
+                  <span className="truncate text-[13px] font-semibold text-zinc-200">
+                    {awayName ?? 'Por definir'}
+                  </span>
+                  <TeamCrest name={awayName ?? '—'} size="sm" />
                 </span>
-              ) : (
-                <span className="font-display text-sm text-ember-400">VS</span>
+              </div>
+              {!decided && (
+                <p className="mt-2 text-center font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Por jugar
+                </p>
               )}
-              <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
-                <span className="truncate text-[13px] font-semibold text-zinc-200">
-                  {awayName ?? 'Por definir'}
-                </span>
-                <TeamCrest name={awayName ?? '—'} size="sm" />
-              </span>
             </div>
-            {!decided && (
-              <p className="mt-2 text-center font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Por jugar
+          ) : (
+            <div className="rounded-xl border border-dashed border-coal-600 bg-coal-950/40 p-3">
+              <div className="flex items-center justify-center gap-2 py-1">
+                <LockIcon className="h-4 w-4 text-zinc-600" />
+                <span className="font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Se define al terminar la liga
+                </span>
+              </div>
+              <p className="mt-1 text-center font-condensed text-[11px] font-semibold uppercase tracking-wide tabular-nums text-zinc-600">
+                {played}/{total} partidos jugados
               </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <Chevron />
 
         {/* Champion */}
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <StageLabel tone={champ ? 'default' : 'default'}>Campeón</StageLabel>
           {champ ? (
             <div className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-emerald-500/50 bg-gradient-to-br from-emerald-500/20 to-coal-950/50 px-3 py-3 shadow-glow-sm">
