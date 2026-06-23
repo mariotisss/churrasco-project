@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
   EditionDetail,
   EditionSummary,
+  Penalty,
   Player,
   PlayerStanding,
   StandingRow,
@@ -46,20 +47,51 @@ export async function getPlayerStandings(): Promise<PlayerStanding[]> {
   return data;
 }
 
+// --- Penalties ---
+export async function getPenalties(): Promise<Penalty[]> {
+  const { data } = await api.get<Penalty[]>('/penalties');
+  return data;
+}
+
+export async function createPenalty(body: {
+  playerId: number;
+  points: number;
+  reason: string;
+}): Promise<Penalty> {
+  const { data } = await api.post<Penalty>('/penalties', body);
+  return data;
+}
+
+export async function updatePenalty(
+  id: number,
+  body: { points: number; reason: string },
+): Promise<Penalty> {
+  const { data } = await api.put<Penalty>(`/penalties/${id}`, body);
+  return data;
+}
+
+export async function deletePenalty(id: number): Promise<void> {
+  await api.delete(`/penalties/${id}`);
+}
+
 // --- Editions ---
 export async function getEditions(): Promise<EditionSummary[]> {
   const { data } = await api.get<EditionSummary[]>('/editions');
   return data;
 }
 
-export async function createEdition(name: string): Promise<EditionSummary> {
-  const { data } = await api.post<EditionSummary>('/editions', { name });
+export async function createEdition(name: string, test = false): Promise<EditionSummary> {
+  const { data } = await api.post<EditionSummary>('/editions', { name, test });
   return data;
 }
 
 export async function getEdition(id: number): Promise<EditionDetail> {
   const { data } = await api.get<EditionDetail>(`/editions/${id}`);
   return data;
+}
+
+export async function deleteEdition(id: number): Promise<void> {
+  await api.delete(`/editions/${id}`);
 }
 
 export async function drawTeams(

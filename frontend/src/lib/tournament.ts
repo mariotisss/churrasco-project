@@ -67,20 +67,21 @@ export function leagueProgress(detail: EditionDetail): {
 
 /**
  * Which edition the home page should headline: a live one if there is one,
- * otherwise the most recently created.
+ * otherwise the most recently created. Sandbox (test) editions never headline.
  */
 export function featuredEditionId(editions: EditionSummary[]): number | null {
-  if (editions.length === 0) return null;
-  const byNewest = [...editions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const real = editions.filter((e) => !e.test);
+  if (real.length === 0) return null;
+  const byNewest = [...real].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const live = byNewest.find(
     (e) => e.status === 'IN_PROGRESS' || e.status === 'TEAMS_DRAWN',
   );
   return (live ?? byNewest[0]).id;
 }
 
-/** Finished editions that crowned a champion, newest first. */
+/** Finished, non-test editions that crowned a champion, newest first. */
 export function palmares(editions: EditionSummary[]): EditionSummary[] {
   return editions
-    .filter((e) => e.champion)
+    .filter((e) => e.champion && !e.test)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

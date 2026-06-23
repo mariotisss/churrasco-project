@@ -21,7 +21,8 @@ export default function ClassificationPage() {
         <p className="mt-3 max-w-md text-sm leading-relaxed text-zinc-400">
           Puntos acumulados por cada jugador a lo largo de las ediciones:{' '}
           <span className="font-semibold text-emerald-300">campeón +2</span> ·{' '}
-          <span className="font-semibold text-ember-300">subcampeón +1</span>.
+          <span className="font-semibold text-ember-300">subcampeón +1</span> ·{' '}
+          <span className="font-semibold text-rose-300">penalización −1/−2</span>.
         </p>
       </header>
 
@@ -30,13 +31,13 @@ export default function ClassificationPage() {
       ) : !rows || rows.length === 0 ? (
         <div className="panel flex flex-col items-center px-6 py-16 text-center">
           <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-coal-800 text-3xl shadow-inset-hi">
-            🏆
+            👥
           </div>
           <p className="font-display text-xl uppercase tracking-tight text-zinc-200">
-            Todavía no hay puntos
+            Aún no hay jugadores
           </p>
           <p className="mt-1 text-sm text-zinc-500">
-            Corona a un campeón en una edición para abrir el ranking.
+            Añade jugadores para construir la clasificación.
           </p>
         </div>
       ) : (
@@ -52,6 +53,9 @@ export default function ClassificationPage() {
                   </th>
                   <th className="hidden w-24 px-2 py-3 text-center sm:table-cell" title="Veces subcampeón">
                     Subcamp.
+                  </th>
+                  <th className="hidden w-20 px-2 py-3 text-center sm:table-cell" title="Puntos penalizados">
+                    Penal.
                   </th>
                   <th className="w-16 px-3 py-3 text-center text-ember-300">Pts</th>
                 </tr>
@@ -93,6 +97,13 @@ function Row({ row, rank }: { row: PlayerStanding; rank: number }) {
       </td>
       <td className="hidden px-2 py-3 text-center tabular-nums text-zinc-400 sm:table-cell">
         {row.runnerUps > 0 ? row.runnerUps : <span className="text-zinc-600">—</span>}
+      </td>
+      <td className="hidden px-2 py-3 text-center tabular-nums sm:table-cell">
+        {row.penaltyPoints > 0 ? (
+          <span className="font-semibold text-rose-300">−{row.penaltyPoints}</span>
+        ) : (
+          <span className="text-zinc-600">—</span>
+        )}
       </td>
       <td className="px-3 py-3 text-center">
         <span className="font-display text-lg leading-none tabular-nums text-white">{row.points}</span>

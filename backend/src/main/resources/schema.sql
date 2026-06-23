@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS edition (
     status            TEXT    NOT NULL DEFAULT 'DRAFT',
     sat_out_player_id INTEGER REFERENCES player(id),
     champion_team_id  INTEGER,
+    -- 1 = sandbox edition: excluded from the all-time ranking and home spotlight.
+    -- Existing databases get this column via SchemaMigrations (ALTER TABLE).
+    is_test           INTEGER NOT NULL DEFAULT 0,
     created_at        INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER) * 1000)
 );
 
@@ -43,5 +46,16 @@ CREATE TABLE IF NOT EXISTS game (
     played_at      INTEGER  -- epoch in milliseconds
 );
 
+-- Manual point penalties applied to a player's all-time ranking.
+CREATE TABLE IF NOT EXISTS penalty (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id  INTEGER NOT NULL REFERENCES player(id) ON DELETE CASCADE,
+    points     INTEGER NOT NULL,           -- points deducted (1 or 2)
+    reason     TEXT    NOT NULL,
+    -- epoch in milliseconds (see InstantEpochMilliConverter)
+    created_at INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER) * 1000)
+);
+
 CREATE INDEX IF NOT EXISTS idx_team_edition ON team(edition_id);
 CREATE INDEX IF NOT EXISTS idx_game_edition ON game(edition_id);
+CREATE INDEX IF NOT EXISTS idx_penalty_player ON penalty(player_id);

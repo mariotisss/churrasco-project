@@ -6,20 +6,26 @@ import {
 import type { EditionDetail } from './types';
 import {
   createEdition,
+  createPenalty,
   createPlayer,
+  deleteEdition,
+  deletePenalty,
   deletePlayer,
   drawTeams,
   getEdition,
   getEditions,
+  getPenalties,
   getPlayers,
   getPlayerStandings,
   recordResult,
+  updatePenalty,
   updatePlayer,
 } from './client';
 
 export const queryKeys = {
   players: (activeOnly: boolean) => ['players', { activeOnly }] as const,
   playerStandings: ['playerStandings'] as const,
+  penalties: ['penalties'] as const,
   editions: ['editions'] as const,
   edition: (id: number) => ['edition', id] as const,
 };
@@ -64,6 +70,43 @@ export function useDeletePlayer() {
   });
 }
 
+// --- Penalties ---
+export function usePenalties() {
+  return useQuery({ queryKey: queryKeys.penalties, queryFn: getPenalties });
+}
+
+/** A penalty change shifts the all-time points, so the ranking is invalidated too. */
+function invalidatePenalties(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: queryKeys.penalties });
+  qc.invalidateQueries({ queryKey: queryKeys.playerStandings });
+}
+
+export function useCreatePenalty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { playerId: number; points: number; reason: string }) =>
+      createPenalty(vars),
+    onSuccess: () => invalidatePenalties(qc),
+  });
+}
+
+export function useUpdatePenalty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: number; points: number; reason: string }) =>
+      updatePenalty(vars.id, { points: vars.points, reason: vars.reason }),
+    onSuccess: () => invalidatePenalties(qc),
+  });
+}
+
+export function useDeletePenalty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deletePenalty(id),
+    onSuccess: () => invalidatePenalties(qc),
+  });
+}
+
 // --- Editions ---
 export function useEditions() {
   return useQuery({ queryKey: queryKeys.editions, queryFn: getEditions });
@@ -72,8 +115,21 @@ export function useEditions() {
 export function useCreateEdition() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => createEdition(name),
+    mutationFn: (vars: { name: string; test?: boolean }) =>
+      createEdition(vars.name, vars.test),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.editions }),
+  });
+}
+
+export function useDeleteEdition() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deleteEdition(id),
+    onSuccess: (_data, id) => {
+      qc.removeQueries({ queryKey: queryKeys.edition(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.editions });
+      qc.invalidateQueries({ queryKey: queryKeys.playerStandings });
+    },
   });
 }
 

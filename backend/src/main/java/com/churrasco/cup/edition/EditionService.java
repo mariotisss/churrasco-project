@@ -1,6 +1,7 @@
 package com.churrasco.cup.edition;
 
 import com.churrasco.cup.api.DtoMapper;
+import com.churrasco.cup.common.BadRequestException;
 import com.churrasco.cup.common.NotFoundException;
 import com.churrasco.cup.edition.dto.CreateEditionRequest;
 import com.churrasco.cup.edition.dto.DrawRequest;
@@ -51,7 +52,7 @@ public class EditionService {
 
     @Transactional
     public EditionSummaryDto create(CreateEditionRequest request) {
-        Edition edition = editionRepository.save(new Edition(request.name().trim()));
+        Edition edition = editionRepository.save(new Edition(request.name().trim(), request.test()));
         return toSummary(edition);
     }
 
@@ -73,6 +74,7 @@ public class EditionService {
                 edition.getId(),
                 edition.getName(),
                 edition.getStatus().name(),
+                edition.isTest(),
                 DtoMapper.toPlayerDto(edition.getSatOutPlayer()),
                 resolveChampion(edition.getChampionTeamId()),
                 teamDtos,
@@ -86,6 +88,25 @@ public class EditionService {
     public EditionDetailDto draw(Long id, DrawRequest request) {
         teamDrawService.draw(id, request == null ? null : request.participantIds());
         return getDetail(id);
+    }
+
+    /**
+     * Deletes a sandbox edition and its teams/matches. Only test editions can be
+     * removed, so real history is never lost. SQLite FK cascade isn't enabled, so
+     * children are deleted explicitly (matches reference teams, hence matches first).
+     */
+    @Transactional
+    public void delete(Long id) {
+        Edition edition = editionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Edicion " + id + " no encontrada"));
+        if (!edition.isTest()) {
+            throw new BadRequestException("Solo se pueden borrar ediciones de prueba");
+        }
+        matchRepository.deleteByEditionId(id);
+        teamRepository.deleteByEditionId(id);
+        matchRepository.flush();
+        teamRepository.flush();
+        editionRepository.delete(edition);
     }
 
     @Transactional(readOnly = true)
@@ -103,6 +124,7 @@ public class EditionService {
                 edition.getId(),
                 edition.getName(),
                 edition.getStatus().name(),
+                edition.isTest(),
                 edition.getCreatedAt(),
                 resolveChampion(edition.getChampionTeamId())
         );

@@ -17,6 +17,9 @@ yarn-error.log*
 .env
 .env.*
 
+# --- Local-only compose override (publishes ports for local testing) ---
+docker-compose.override.yml
+
 # --- IDE / OS ---
 .idea/
 *.iml

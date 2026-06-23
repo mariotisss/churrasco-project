@@ -8,6 +8,7 @@ public record EditionSummaryDto(
         Long id,
         String name,
         String status,
+        boolean test,
         Instant createdAt,
         TeamRefDto champion
 ) {

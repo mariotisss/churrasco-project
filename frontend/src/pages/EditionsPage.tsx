@@ -5,6 +5,7 @@ import { apiErrorMessage } from '../api/client';
 import { featuredEditionId, palmares } from '../lib/tournament';
 import type { EditionSummary } from '../api/types';
 import StatusBadge from '../components/StatusBadge';
+import TestBadge from '../components/TestBadge';
 import TeamCrest from '../components/TeamCrest';
 import FeaturedEdition from '../components/FeaturedEdition';
 
@@ -18,6 +19,7 @@ export default function EditionsPage() {
   const { data: editions, isLoading } = useEditions();
   const createEdition = useCreateEdition();
   const [name, setName] = useState(defaultEditionName());
+  const [test, setTest] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleCreate(e: React.FormEvent) {
@@ -25,10 +27,16 @@ export default function EditionsPage() {
     const trimmed = name.trim();
     if (!trimmed) return;
     setError(null);
-    createEdition.mutate(trimmed, {
-      onSuccess: () => setName(defaultEditionName()),
-      onError: (err) => setError(apiErrorMessage(err)),
-    });
+    createEdition.mutate(
+      { name: trimmed, test },
+      {
+        onSuccess: () => {
+          setName(defaultEditionName());
+          setTest(false);
+        },
+        onError: (err) => setError(apiErrorMessage(err)),
+      },
+    );
   }
 
   const featuredId = editions ? featuredEditionId(editions) : null;
@@ -56,6 +64,18 @@ export default function EditionsPage() {
               <span className="text-base leading-none">+</span> Crear
             </button>
           </div>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-400 transition hover:text-zinc-200">
+            <input
+              type="checkbox"
+              checked={test}
+              onChange={(e) => setTest(e.target.checked)}
+              className="h-4 w-4 cursor-pointer rounded border-coal-600 bg-coal-950 accent-sky-500"
+            />
+            Edición de prueba{' '}
+            <span className="font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-600">
+              (no cuenta para la clasificación)
+            </span>
+          </label>
           {error && <p className="text-sm text-rose-400">{error}</p>}
         </form>
       </header>
@@ -128,9 +148,12 @@ function ArchiveRow({ edition, index }: { edition: EditionSummary; index: number
         {String(index).padStart(2, '0')}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-xl uppercase leading-none tracking-tight text-white transition group-hover:text-ember-300">
-          {edition.name}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="truncate font-display text-xl uppercase leading-none tracking-tight text-white transition group-hover:text-ember-300">
+            {edition.name}
+          </p>
+          {edition.test && <TestBadge />}
+        </div>
         {edition.champion && (
           <p className="mt-1 truncate font-condensed text-xs font-semibold uppercase tracking-wide text-emerald-400">
             🏆 {edition.champion.name}

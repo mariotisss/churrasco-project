@@ -7,6 +7,7 @@ import com.churrasco.cup.edition.dto.EditionSummaryDto;
 import com.churrasco.cup.edition.dto.StandingRowDto;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -53,5 +54,12 @@ public class EditionController {
     @GetMapping("/{id}/standings")
     public List<StandingRowDto> standings(@PathVariable Long id) {
         return service.getStandings(id);
+    }
+
+    /** Deletes a sandbox edition (only test editions can be removed). */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

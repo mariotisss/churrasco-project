@@ -55,6 +55,7 @@ export interface EditionSummary {
   id: number;
   name: string;
   status: EditionStatus;
+  test: boolean;
   createdAt: string;
   champion: TeamRef | null;
 }
@@ -65,12 +66,23 @@ export interface PlayerStanding {
   points: number;
   championships: number;
   runnerUps: number;
+  penaltyPoints: number;
+}
+
+export interface Penalty {
+  id: number;
+  playerId: number;
+  playerName: string;
+  points: number;
+  reason: string;
+  createdAt: string;
 }
 
 export interface EditionDetail {
   id: number;
   name: string;
   status: EditionStatus;
+  test: boolean;
   satOutPlayer: Player | null;
   champion: TeamRef | null;
   teams: TeamDto[];

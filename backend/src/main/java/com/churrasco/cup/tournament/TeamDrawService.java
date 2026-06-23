@@ -88,6 +88,14 @@ public class TeamDrawService {
         for (int i = 0; i < pool.size(); i += 2) {
             Player p1 = pool.get(i);
             Player p2 = pool.get(i + 1);
+            // Roles are random too: player1 plays up front ("delante") and player2 at the
+            // back ("atras"). The pool is already shuffled, so an extra coin flip keeps the
+            // within-pair order independent of the team name's left-to-right reading.
+            if (random.nextBoolean()) {
+                Player tmp = p1;
+                p1 = p2;
+                p2 = tmp;
+            }
             teams.add(new Team(edition, p1.getName() + " & " + p2.getName(), p1, p2));
         }
         teams = teamRepository.saveAll(teams);

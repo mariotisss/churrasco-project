@@ -5,6 +5,7 @@ import EditionsPage from './pages/EditionsPage';
 import EditionDetailPage from './pages/EditionDetailPage';
 import PlayersPage from './pages/PlayersPage';
 import ClassificationPage from './pages/ClassificationPage';
+import PenaltiesPage from './pages/PenaltiesPage';
 
 type IconProps = { className?: string };
 
@@ -37,10 +38,27 @@ function RankingIcon({ className }: IconProps) {
   );
 }
 
-const NAV = [
+function CardIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <rect x="6" y="3.5" width="9" height="13" rx="1.5" transform="rotate(-12 6 3.5)" />
+      <path d="M14.5 9.5 19 13a2 2 0 0 1 .5 2.6l-3 5.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+type NavItem = {
+  to: string;
+  label: string;
+  short?: string;
+  Icon: (p: IconProps) => JSX.Element;
+};
+
+const NAV: NavItem[] = [
   { to: '/', label: 'Ediciones', Icon: TrophyIcon },
   { to: '/players', label: 'Jugadores', Icon: UsersIcon },
-  { to: '/classification', label: 'Clasificación', Icon: RankingIcon },
+  { to: '/classification', label: 'Clasificación', short: 'Clasif.', Icon: RankingIcon },
+  { to: '/penalties', label: 'Penalizaciones', short: 'Penas', Icon: CardIcon },
 ];
 
 function Brand() {
@@ -86,7 +104,7 @@ function SideNavItem({ to, label, Icon }: { to: string; label: string; Icon: (p:
 
 function LiveWidget() {
   const { data: editions } = useEditions();
-  const live = editions?.find((e) => e.status === 'IN_PROGRESS');
+  const live = editions?.find((e) => e.status === 'IN_PROGRESS' && !e.test);
   const featuredId = editions ? featuredEditionId(editions) : null;
 
   if (live) {
@@ -156,20 +174,20 @@ export default function App() {
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <Brand />
           <nav className="flex items-center gap-1 rounded-xl border border-coal-700/60 bg-coal-900/70 p-1">
-            {NAV.map(({ to, label }) => (
+            {NAV.map(({ to, label, short }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={to === '/'}
                 className={({ isActive }) =>
-                  `rounded-lg px-3 py-1.5 font-condensed text-sm font-bold uppercase tracking-wide transition ${
+                  `rounded-lg px-2.5 py-1.5 font-condensed text-xs font-bold uppercase tracking-wide transition sm:px-3 sm:text-sm ${
                     isActive
                       ? 'bg-gradient-to-b from-ember-500 to-ember-600 text-white shadow-glow-sm'
                       : 'text-zinc-400 hover:text-zinc-100'
                   }`
                 }
               >
-                {label}
+                {short ?? label}
               </NavLink>
             ))}
           </nav>
@@ -183,6 +201,7 @@ export default function App() {
             <Route path="/" element={<EditionsPage />} />
             <Route path="/players" element={<PlayersPage />} />
             <Route path="/classification" element={<ClassificationPage />} />
+            <Route path="/penalties" element={<PenaltiesPage />} />
             <Route path="/editions/:id" element={<EditionDetailPage />} />
           </Routes>
         </main>
