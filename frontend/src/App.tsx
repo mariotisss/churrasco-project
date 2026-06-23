@@ -47,7 +47,7 @@ function Brand() {
   return (
     <NavLink to="/" className="group flex flex-col leading-none">
       <span className="font-display text-xl uppercase tracking-tight text-white transition group-hover:text-ember-300">
-        Churrasco&apos;s Cup!
+        Churrasco&apos;s Cup!!
       </span>
       <span className="mt-1.5 font-condensed text-[10px] font-semibold uppercase tracking-broadcast text-ember-400/90">
         Liga de futbolín
