@@ -8,7 +8,7 @@ export default function TeamDrawPanel({
   onDrawn,
 }: {
   edition: EditionDetail;
-  onDrawn?: () => void;
+  onDrawn?: (detail: EditionDetail) => void;
 }) {
   const { data: activePlayers } = usePlayers(true);
   const drawTeams = useDrawTeams(edition.id);
@@ -35,7 +35,7 @@ export default function TeamDrawPanel({
   function handleDraw() {
     setError(null);
     drawTeams.mutate(selected ?? undefined, {
-      onSuccess: () => onDrawn?.(),
+      onSuccess: (detail) => onDrawn?.(detail),
       onError: (err) => setError(apiErrorMessage(err)),
     });
   }

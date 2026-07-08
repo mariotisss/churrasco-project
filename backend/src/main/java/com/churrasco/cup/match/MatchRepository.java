@@ -8,6 +8,8 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
 
     List<Match> findByEditionIdOrderByOrderIndexAsc(Long editionId);
 
+    List<Match> findByStatus(MatchStatus status);
+
     List<Match> findByEditionIdAndFinalissimaFalse(Long editionId);
 
     boolean existsByEditionIdAndStatus(Long editionId, MatchStatus status);

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,8 @@ import java.util.Random;
 
 /**
  * Draws the teams for an edition and generates its schedule.
- * If the number of participants is odd, the player who sits out is chosen at random.
+ * If the number of participants is odd, the player who sits out is drawn only among
+ * those with the most played matches, so nobody lagging behind is ever left out.
  */
 @Service
 public class TeamDrawService {
@@ -76,9 +78,12 @@ public class TeamDrawService {
         List<Player> pool = new ArrayList<>(participants);
         Collections.shuffle(pool, random);
 
-        // Odd count -> one sits out (random, since the pool is already shuffled).
+        // Odd count -> one sits out. Only the participants tied for the most played
+        // matches can be excluded, so a player with fewer matches than the rest never
+        // sits out; when everyone is level it stays a pure random draw.
         if (pool.size() % 2 != 0) {
-            Player satOut = pool.remove(pool.size() - 1);
+            Player satOut = pickSatOut(pool);
+            pool.remove(satOut);
             edition.setSatOutPlayer(satOut);
         } else {
             edition.setSatOutPlayer(null);
@@ -106,6 +111,38 @@ public class TeamDrawService {
         edition.setStatus(EditionStatus.TEAMS_DRAWN);
         edition.setChampionTeamId(null);
         editionRepository.save(edition);
+    }
+
+    /** Random pick among the participants with the highest number of played matches. */
+    private Player pickSatOut(List<Player> pool) {
+        Map<Long, Long> played = playedMatchCounts();
+        long max = pool.stream()
+                .mapToLong(p -> played.getOrDefault(p.getId(), 0L))
+                .max()
+                .orElse(0L);
+        List<Player> candidates = pool.stream()
+                .filter(p -> played.getOrDefault(p.getId(), 0L) == max)
+                .toList();
+        return candidates.get(random.nextInt(candidates.size()));
+    }
+
+    /**
+     * Played matches per player across all editions. Sandbox editions are skipped,
+     * consistent with the all-time ranking. The edition being (re-)drawn never
+     * contributes: its matches are still PENDING (a draw is blocked otherwise).
+     */
+    private Map<Long, Long> playedMatchCounts() {
+        Map<Long, Long> counts = new HashMap<>();
+        for (Match match : matchRepository.findByStatus(MatchStatus.PLAYED)) {
+            if (match.getEdition().isTest()) {
+                continue;
+            }
+            for (Team team : List.of(match.getHomeTeam(), match.getAwayTeam())) {
+                counts.merge(team.getPlayer1().getId(), 1L, Long::sum);
+                counts.merge(team.getPlayer2().getId(), 1L, Long::sum);
+            }
+        }
+        return counts;
     }
 
     private List<Player> resolveParticipants(List<Long> participantIds) {

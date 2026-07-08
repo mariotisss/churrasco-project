@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -99,6 +100,36 @@ class TournamentFlowIntegrationTest {
         assertEquals("FINISHED", finished.status());
         assertNotNull(finished.champion(), "Debe haber campeon tras la Finalissima");
         assertEquals(finished.finalissima().homeTeam().id(), finished.champion().id());
+    }
+
+    @Test
+    void satOutPlayerIsNeverOneWithFewerPlayedMatches() {
+        // First edition: four veterans play a full tournament (3 played matches each).
+        List<Long> veteranIds = new ArrayList<>();
+        for (String name : List.of("Vet1", "Vet2", "Vet3", "Vet4")) {
+            veteranIds.add(playerService.create(new CreatePlayerRequest(name)).id());
+        }
+        EditionSummaryDto first = editionService.create(new CreateEditionRequest("Primera", false));
+        EditionDetailDto firstDetail = editionService.draw(first.id(), new DrawRequest(veteranIds));
+        List<MatchDto> league = firstDetail.matches().stream().filter(m -> !m.finalissima()).toList();
+        matchService.recordResult(league.get(0).id(), new MatchResultRequest(10, 5));
+        EditionDetailDto afterLeague =
+                matchService.recordResult(league.get(1).id(), new MatchResultRequest(3, 8));
+        matchService.recordResult(afterLeague.finalissima().id(), new MatchResultRequest(7, 4));
+
+        // Second edition: the four veterans plus a newcomer with zero played matches.
+        Long rookieId = playerService.create(new CreatePlayerRequest("Novato")).id();
+        List<Long> allIds = new ArrayList<>(veteranIds);
+        allIds.add(rookieId);
+        EditionSummaryDto second = editionService.create(new CreateEditionRequest("Segunda", false));
+
+        // Re-draw several times: the rookie must never be the one sitting out.
+        for (int i = 0; i < 5; i++) {
+            EditionDetailDto detail = editionService.draw(second.id(), new DrawRequest(allIds));
+            assertNotNull(detail.satOutPlayer());
+            assertNotEquals(rookieId, detail.satOutPlayer().id(),
+                    "El jugador con menos partidos que el resto no puede quedarse fuera");
+        }
     }
 
     @Test

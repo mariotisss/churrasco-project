@@ -10,6 +10,7 @@ import StandingsTable from '../components/StandingsTable';
 import FixturesList from '../components/FixturesList';
 import FinalissimaBox from '../components/FinalissimaBox';
 import TeamDrawPanel from '../components/TeamDrawPanel';
+import DrawRevealOverlay from '../components/DrawRevealOverlay';
 import TeamCrest from '../components/TeamCrest';
 import TeamLineup from '../components/TeamLineup';
 import RoadToFinal from '../components/RoadToFinal';
@@ -29,6 +30,8 @@ export default function EditionDetailPage() {
   const editionId = Number(id);
   const { data: edition, isLoading, isError } = useEdition(editionId);
   const [tab, setTab] = useState<Tab>('resumen');
+  // Freshly drawn edition pending its broadcast-style team reveal.
+  const [reveal, setReveal] = useState<EditionDetail | null>(null);
 
   if (Number.isNaN(editionId)) {
     return <Notice tone="error">Edición no válida.</Notice>;
@@ -56,6 +59,17 @@ export default function EditionDetailPage() {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {reveal && (
+        <DrawRevealOverlay
+          teams={reveal.teams}
+          satOutPlayer={reveal.satOutPlayer}
+          onClose={() => {
+            setReveal(null);
+            setTab('equipos');
+          }}
+        />
+      )}
+
       <div className="flex items-center justify-between gap-3">
         <BackLink />
         {edition.test && <DeleteEditionButton edition={edition} />}
@@ -99,7 +113,7 @@ export default function EditionDetailPage() {
       {!hasTeams ? (
         /* Pre-tournament: draw is the whole show */
         <div className="grid gap-6 lg:grid-cols-2">
-          <TeamDrawPanel edition={edition} onDrawn={() => setTab('equipos')} />
+          <TeamDrawPanel edition={edition} onDrawn={setReveal} />
           <Notice tone="muted">
             Sortea los equipos para generar la liga, la clasificación y el camino a la Finalissima.
           </Notice>
@@ -150,7 +164,7 @@ export default function EditionDetailPage() {
 
           {tab === 'equipos' && (
             <div className="animate-fade-in grid gap-6 lg:grid-cols-2">
-              <TeamDrawPanel edition={edition} onDrawn={() => setTab('equipos')} />
+              <TeamDrawPanel edition={edition} onDrawn={setReveal} />
               <TeamsList teams={edition.teams} />
             </div>
           )}

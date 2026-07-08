@@ -69,11 +69,24 @@ export default {
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
+        // Draw reveal: crest pops in with a slight overshoot…
+        'pop-in': {
+          '0%': { opacity: '0', transform: 'scale(0.3)' },
+          '70%': { opacity: '1', transform: 'scale(1.12)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        // …and the team name slams down like a lower-third title.
+        'slam-in': {
+          '0%': { opacity: '0', transform: 'translateY(-28px) scale(1.35)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.4s ease-out both',
         rise: 'rise 0.5s cubic-bezier(0.2,0.7,0.2,1) both',
         shimmer: 'shimmer 1.6s infinite',
+        'pop-in': 'pop-in 0.55s cubic-bezier(0.2,0.9,0.3,1) both',
+        'slam-in': 'slam-in 0.45s cubic-bezier(0.2,0.9,0.3,1) both',
       },
     },
   },
