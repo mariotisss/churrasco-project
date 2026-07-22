@@ -46,6 +46,13 @@ public class Edition {
     @Column(name = "is_test", nullable = false)
     private boolean test = false;
 
+    /**
+     * League format: true = double round-robin (ida y vuelta, each pair twice);
+     * false = single round-robin (partido único, each pair once).
+     */
+    @Column(name = "round_trip", nullable = false)
+    private boolean roundTrip = true;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -103,6 +110,14 @@ public class Edition {
 
     public void setTest(boolean test) {
         this.test = test;
+    }
+
+    public boolean isRoundTrip() {
+        return roundTrip;
+    }
+
+    public void setRoundTrip(boolean roundTrip) {
+        this.roundTrip = roundTrip;
     }
 
     public Instant getCreatedAt() {

@@ -1,6 +1,7 @@
 import type { MatchDto, TeamRef } from '../api/types';
 import { MatchRow } from './FixturesList';
 import TeamCrest from './TeamCrest';
+import { SIDE_LABEL, SideCard, sidesForMatch } from './MatchSide';
 
 export default function FinalissimaBox({
   finalissima,
@@ -12,6 +13,7 @@ export default function FinalissimaBox({
   editionId: number;
 }) {
   const decided = finalissima.status === 'PLAYED';
+  const sides = sidesForMatch(finalissima.id);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-ember-500/40 bg-gradient-to-b from-coal-850/90 to-coal-900/95 shadow-card">
@@ -31,23 +33,33 @@ export default function FinalissimaBox({
           <div className="space-y-4">
             {/* Final scoreline */}
             <div className="flex items-center justify-between gap-3 rounded-xl border border-coal-700/60 bg-coal-950/50 px-4 py-3">
-              <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
+              <SideCard
+                side={sides.home}
+                edge="left"
+                title={SIDE_LABEL[sides.home]}
+                className="flex min-w-0 flex-1 items-center justify-end gap-2 py-1 pl-2.5 pr-2 text-right"
+              >
                 <span className="truncate text-sm font-semibold text-zinc-200">
                   {finalissima.homeTeam.name}
                 </span>
                 <TeamCrest name={finalissima.homeTeam.name} size="sm" />
-              </span>
+              </SideCard>
               <span className="scoreboard text-xl">
                 <span>{finalissima.homeScore}</span>
                 <span className="text-coal-600">:</span>
                 <span>{finalissima.awayScore}</span>
               </span>
-              <span className="flex min-w-0 flex-1 items-center gap-2">
+              <SideCard
+                side={sides.away}
+                edge="right"
+                title={SIDE_LABEL[sides.away]}
+                className="flex min-w-0 flex-1 items-center gap-2 py-1 pl-2 pr-2.5"
+              >
                 <TeamCrest name={finalissima.awayTeam.name} size="sm" />
                 <span className="truncate text-sm font-semibold text-zinc-200">
                   {finalissima.awayTeam.name}
                 </span>
-              </span>
+              </SideCard>
             </div>
 
             {/* Champion reveal */}

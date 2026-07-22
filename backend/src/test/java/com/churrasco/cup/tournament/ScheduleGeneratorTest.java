@@ -32,29 +32,53 @@ class ScheduleGeneratorTest {
 
     @Test
     void threeTeamsProduceSixMatches() {
-        assertEquals(6, generator.generate(new Edition("e"), teams(3)).size());
+        assertEquals(6, generator.generate(new Edition("e"), teams(3), true).size());
     }
 
     @Test
     void fourTeamsProduceTwelveMatches() {
-        assertEquals(12, generator.generate(new Edition("e"), teams(4)).size());
+        assertEquals(12, generator.generate(new Edition("e"), teams(4), true).size());
     }
 
     @Test
     void twoTeamsProduceTwoMatches() {
-        assertEquals(2, generator.generate(new Edition("e"), teams(2)).size());
+        assertEquals(2, generator.generate(new Edition("e"), teams(2), true).size());
+    }
+
+    @Test
+    void singleRoundThreeTeamsProduceThreeMatches() {
+        assertEquals(3, generator.generate(new Edition("e"), teams(3), false).size());
+    }
+
+    @Test
+    void singleRoundHasNoVueltaAndEachPairPlaysOnce() {
+        List<Match> matches = generator.generate(new Edition("e"), teams(4), false);
+
+        assertEquals(6, matches.size());
+        assertTrue(matches.stream().allMatch(m -> m.getLeg() == Leg.IDA), "Partido único: solo IDA");
+
+        // Each unordered pair appears exactly once.
+        Map<String, Integer> unordered = new HashMap<>();
+        for (Match m : matches) {
+            String a = m.getHomeTeam().getName();
+            String b = m.getAwayTeam().getName();
+            String key = a.compareTo(b) < 0 ? a + "-" + b : b + "-" + a;
+            unordered.merge(key, 1, Integer::sum);
+        }
+        assertEquals(6, unordered.size());
+        assertTrue(unordered.values().stream().allMatch(count -> count == 1));
     }
 
     @Test
     void noTeamPlaysAgainstItself() {
-        List<Match> matches = generator.generate(new Edition("e"), teams(4));
+        List<Match> matches = generator.generate(new Edition("e"), teams(4), true);
         assertTrue(matches.stream()
                 .noneMatch(m -> m.getHomeTeam().getName().equals(m.getAwayTeam().getName())));
     }
 
     @Test
     void eachUnorderedPairPlaysExactlyTwiceOnceEachOrientation() {
-        List<Match> matches = generator.generate(new Edition("e"), teams(4));
+        List<Match> matches = generator.generate(new Edition("e"), teams(4), true);
 
         long ida = matches.stream().filter(m -> m.getLeg() == Leg.IDA).count();
         long vuelta = matches.stream().filter(m -> m.getLeg() == Leg.VUELTA).count();
@@ -82,7 +106,7 @@ class ScheduleGeneratorTest {
 
     @Test
     void orderIndexIsContiguousAndUnique() {
-        List<Match> matches = generator.generate(new Edition("e"), teams(3));
+        List<Match> matches = generator.generate(new Edition("e"), teams(3), true);
         List<Integer> indices = matches.stream().map(Match::getOrderIndex).sorted().toList();
         assertEquals(List.of(0, 1, 2, 3, 4, 5), indices);
     }

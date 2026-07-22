@@ -13,6 +13,7 @@ export default function TeamDrawPanel({
   const { data: activePlayers } = usePlayers(true);
   const drawTeams = useDrawTeams(edition.id);
   const [selected, setSelected] = useState<number[] | null>(null);
+  const [roundTrip, setRoundTrip] = useState(edition.roundTrip);
   const [error, setError] = useState<string | null>(null);
 
   const hasTeams = edition.teams.length > 0;
@@ -34,10 +35,13 @@ export default function TeamDrawPanel({
 
   function handleDraw() {
     setError(null);
-    drawTeams.mutate(selected ?? undefined, {
-      onSuccess: (detail) => onDrawn?.(detail),
-      onError: (err) => setError(apiErrorMessage(err)),
-    });
+    drawTeams.mutate(
+      { participantIds: selected ?? undefined, roundTrip },
+      {
+        onSuccess: (detail) => onDrawn?.(detail),
+        onError: (err) => setError(apiErrorMessage(err)),
+      },
+    );
   }
 
   const selectedCount = selected?.length ?? 0;
@@ -109,6 +113,28 @@ export default function TeamDrawPanel({
       )}
 
       {(!hasTeams || !hasResults) && (
+        <div>
+          <p className="mb-1.5 font-condensed text-sm font-semibold uppercase tracking-wide text-zinc-400">
+            Formato de la liga
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <FormatOption
+              active={roundTrip}
+              onClick={() => setRoundTrip(true)}
+              title="Ida y vuelta"
+              subtitle="Cada pareja se enfrenta dos veces"
+            />
+            <FormatOption
+              active={!roundTrip}
+              onClick={() => setRoundTrip(false)}
+              title="Partido único"
+              subtitle="Cada pareja se enfrenta una vez"
+            />
+          </div>
+        </div>
+      )}
+
+      {(!hasTeams || !hasResults) && (
         <button
           onClick={handleDraw}
           disabled={!canDraw || drawTeams.isPending}
@@ -129,5 +155,37 @@ export default function TeamDrawPanel({
       )}
       {error && <p className="text-sm text-rose-400">{error}</p>}
     </div>
+  );
+}
+
+function FormatOption({
+  active,
+  onClick,
+  title,
+  subtitle,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-lg border px-3 py-2.5 text-left transition ${
+        active
+          ? 'border-ember-500/50 bg-ember-500/15'
+          : 'border-coal-700 bg-coal-950/50 hover:border-coal-600'
+      }`}
+    >
+      <span
+        className={`block text-sm font-semibold ${active ? 'text-ember-200' : 'text-zinc-300'}`}
+      >
+        {title}
+      </span>
+      <span className="mt-0.5 block text-[11px] leading-tight text-zinc-500">{subtitle}</span>
+    </button>
   );
 }

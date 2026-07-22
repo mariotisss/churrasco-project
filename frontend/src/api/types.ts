@@ -83,6 +83,8 @@ export interface EditionDetail {
   name: string;
   status: EditionStatus;
   test: boolean;
+  /** true = ida y vuelta (double round-robin); false = partido único (single). */
+  roundTrip: boolean;
   satOutPlayer: Player | null;
   champion: TeamRef | null;
   teams: TeamDto[];

@@ -15,6 +15,7 @@ import TeamCrest from '../components/TeamCrest';
 import TeamLineup from '../components/TeamLineup';
 import RoadToFinal from '../components/RoadToFinal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { SIDE_LABEL, SideCard, sidesForMatch } from '../components/MatchSide';
 
 type Tab = 'resumen' | 'clasificacion' | 'partidos' | 'equipos';
 
@@ -186,20 +187,37 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
       {next && (
         <div>
           <h2 className="lower-third mb-3">Próximo partido</h2>
-          <div className="panel flex flex-wrap items-center justify-center gap-x-4 gap-y-2 p-5">
-            <span className="flex min-w-0 items-center gap-2">
-              <TeamCrest name={next.homeTeam.name} size="md" />
-              <span className="truncate text-[15px] font-semibold text-zinc-100">
-                {next.homeTeam.name}
-              </span>
-            </span>
-            <span className="font-display text-lg text-ember-400">VS</span>
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-[15px] font-semibold text-zinc-100">
-                {next.awayTeam.name}
-              </span>
-              <TeamCrest name={next.awayTeam.name} size="md" />
-            </span>
+          <div className="panel flex flex-wrap items-center justify-center gap-x-3 gap-y-2 p-5">
+            {(() => {
+              const sides = sidesForMatch(next.id);
+              return (
+                <>
+                  <SideCard
+                    side={sides.home}
+                    edge="left"
+                    title={SIDE_LABEL[sides.home]}
+                    className="flex min-w-0 items-center gap-2 py-1.5 pl-2.5 pr-3"
+                  >
+                    <TeamCrest name={next.homeTeam.name} size="md" />
+                    <span className="truncate text-[15px] font-semibold text-zinc-100">
+                      {next.homeTeam.name}
+                    </span>
+                  </SideCard>
+                  <span className="font-display text-lg text-ember-400">VS</span>
+                  <SideCard
+                    side={sides.away}
+                    edge="right"
+                    title={SIDE_LABEL[sides.away]}
+                    className="flex min-w-0 items-center gap-2 py-1.5 pl-3 pr-2.5"
+                  >
+                    <span className="truncate text-[15px] font-semibold text-zinc-100">
+                      {next.awayTeam.name}
+                    </span>
+                    <TeamCrest name={next.awayTeam.name} size="md" />
+                  </SideCard>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

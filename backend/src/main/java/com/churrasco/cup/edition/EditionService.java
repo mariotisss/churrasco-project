@@ -75,6 +75,7 @@ public class EditionService {
                 edition.getName(),
                 edition.getStatus().name(),
                 edition.isTest(),
+                edition.isRoundTrip(),
                 DtoMapper.toPlayerDto(edition.getSatOutPlayer()),
                 resolveChampion(edition.getChampionTeamId()),
                 teamDtos,
@@ -86,7 +87,9 @@ public class EditionService {
 
     @Transactional
     public EditionDetailDto draw(Long id, DrawRequest request) {
-        teamDrawService.draw(id, request == null ? null : request.participantIds());
+        List<Long> participantIds = request == null ? null : request.participantIds();
+        boolean roundTrip = request == null || request.isRoundTrip();
+        teamDrawService.draw(id, participantIds, roundTrip);
         return getDetail(id);
     }
 

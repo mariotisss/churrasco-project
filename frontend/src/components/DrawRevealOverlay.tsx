@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Player, TeamDto } from '../api/types';
 import TeamCrest from './TeamCrest';
@@ -10,13 +10,10 @@ type Step =
   | { kind: 'team'; index: number }
   | { kind: 'summary' };
 
-const INTRO_MS = 2200;
-const SAT_OUT_MS = 3200;
-const TEAM_MS = 3600;
-
 /**
  * Broadcast-style reveal shown right after a draw: the teams come out one by
- * one (crest, name, lineup) before handing control back to the bracket.
+ * one (crest, name, lineup), advancing on click (no autoplay), before handing
+ * control back to the bracket.
  */
 export default function DrawRevealOverlay({
   teams,
@@ -38,14 +35,7 @@ export default function DrawRevealOverlay({
   const [stepIndex, setStepIndex] = useState(0);
   const step = steps[stepIndex];
 
-  // Auto-advance every step except the final summary, which waits for the user.
-  useEffect(() => {
-    if (step.kind === 'summary') return;
-    const ms = step.kind === 'intro' ? INTRO_MS : step.kind === 'satOut' ? SAT_OUT_MS : TEAM_MS;
-    const t = setTimeout(() => setStepIndex((i) => Math.min(i + 1, steps.length - 1)), ms);
-    return () => clearTimeout(t);
-  }, [step, steps.length]);
-
+  // No autoplay: each step waits for a click before advancing.
   function advance() {
     setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   }
@@ -67,8 +57,8 @@ export default function DrawRevealOverlay({
             <h2 className="mt-4 animate-slam-in font-display text-4xl uppercase tracking-tight text-white sm:text-6xl">
               ¡Sorteo realizado!
             </h2>
-            <p className="mt-4 animate-pulse font-condensed text-sm font-bold uppercase tracking-broadcast text-ember-400">
-              Presentando a los equipos…
+            <p className="mt-4 font-condensed text-sm font-bold uppercase tracking-broadcast text-ember-400">
+              Toca para presentar a los equipos
             </p>
           </div>
         )}
@@ -146,9 +136,12 @@ export default function DrawRevealOverlay({
           </div>
         )}
 
-        {/* Progress dots + skip, hidden on the summary */}
+        {/* Tap-to-continue hint + progress dots + skip, hidden on the summary */}
         {step.kind !== 'summary' && (
           <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-3">
+            <p className="animate-pulse font-condensed text-[11px] font-semibold uppercase tracking-broadcast text-zinc-500">
+              Toca para continuar →
+            </p>
             <div className="flex gap-1.5">
               {steps.slice(0, -1).map((_, i) => (
                 <span

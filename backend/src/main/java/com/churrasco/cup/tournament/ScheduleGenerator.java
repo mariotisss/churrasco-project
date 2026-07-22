@@ -10,18 +10,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Generates the schedule for a double round-robin (home and away) for N teams:
- * each pair plays twice -> N*(N-1) matches total (3 teams -> 6, 4 teams -> 12).
+ * Generates the schedule for N teams, either a double round-robin (ida y vuelta,
+ * each pair twice -> N*(N-1) matches) or a single round-robin (partido único, each
+ * pair once -> N*(N-1)/2 matches), depending on {@code roundTrip}.
  *
  * Uses the "circle method" to spread the pairings across rounds where no team plays
- * twice. The VUELTA (away leg) repeats the same pairings with home/away swapped.
+ * twice. When roundTrip is set the VUELTA (away leg) repeats the same pairings with
+ * home/away swapped.
  */
 @Component
 public class ScheduleGenerator {
 
     private static final int BYE = -1;
 
-    public List<Match> generate(Edition edition, List<Team> teams) {
+    public List<Match> generate(Edition edition, List<Team> teams, boolean roundTrip) {
         int n = teams.size();
         if (n < 2) {
             throw new IllegalArgumentException("Se necesitan al menos 2 equipos para generar el calendario");
@@ -29,16 +31,18 @@ public class ScheduleGenerator {
 
         List<int[]> idaPairings = roundRobinPairings(n);
 
-        List<Match> matches = new ArrayList<>(idaPairings.size() * 2);
+        List<Match> matches = new ArrayList<>(idaPairings.size() * (roundTrip ? 2 : 1));
         int order = 0;
 
         // IDA (home leg): a at home, b away
         for (int[] pair : idaPairings) {
             matches.add(new Match(edition, teams.get(pair[0]), teams.get(pair[1]), Leg.IDA, order++, false));
         }
-        // VUELTA (away leg): home/away swapped
-        for (int[] pair : idaPairings) {
-            matches.add(new Match(edition, teams.get(pair[1]), teams.get(pair[0]), Leg.VUELTA, order++, false));
+        // VUELTA (away leg): home/away swapped -- only for the ida y vuelta format.
+        if (roundTrip) {
+            for (int[] pair : idaPairings) {
+                matches.add(new Match(edition, teams.get(pair[1]), teams.get(pair[0]), Leg.VUELTA, order++, false));
+            }
         }
 
         return matches;

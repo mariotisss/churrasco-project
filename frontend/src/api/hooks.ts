@@ -153,7 +153,8 @@ function cacheEdition(qc: ReturnType<typeof useQueryClient>, detail: EditionDeta
 export function useDrawTeams(editionId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (participantIds?: number[]) => drawTeams(editionId, participantIds),
+    mutationFn: (vars: { participantIds?: number[]; roundTrip: boolean }) =>
+      drawTeams(editionId, vars.participantIds, vars.roundTrip),
     onSuccess: (detail) => cacheEdition(qc, detail),
   });
 }

@@ -54,7 +54,7 @@ public class TeamDrawService {
     }
 
     @Transactional
-    public void draw(Long editionId, List<Long> participantIds) {
+    public void draw(Long editionId, List<Long> participantIds, boolean roundTrip) {
         Edition edition = editionRepository.findById(editionId)
                 .orElseThrow(() -> new NotFoundException("Edicion " + editionId + " no encontrada"));
 
@@ -105,9 +105,10 @@ public class TeamDrawService {
         }
         teams = teamRepository.saveAll(teams);
 
-        List<Match> matches = scheduleGenerator.generate(edition, teams);
+        List<Match> matches = scheduleGenerator.generate(edition, teams, roundTrip);
         matchRepository.saveAll(matches);
 
+        edition.setRoundTrip(roundTrip);
         edition.setStatus(EditionStatus.TEAMS_DRAWN);
         edition.setChampionTeamId(null);
         editionRepository.save(edition);

@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS edition (
     -- 1 = sandbox edition: excluded from the all-time ranking and home spotlight.
     -- Existing databases get this column via SchemaMigrations (ALTER TABLE).
     is_test           INTEGER NOT NULL DEFAULT 0,
+    -- 1 = double round-robin (ida y vuelta); 0 = single round-robin (partido único).
+    -- Existing databases get this column via SchemaMigrations (ALTER TABLE).
+    round_trip        INTEGER NOT NULL DEFAULT 1,
     created_at        INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER) * 1000)
 );
 

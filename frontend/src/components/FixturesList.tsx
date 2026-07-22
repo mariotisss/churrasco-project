@@ -3,6 +3,7 @@ import { useRecordResult } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { Leg, MatchDto } from '../api/types';
 import TeamCrest from './TeamCrest';
+import { SIDE_LABEL, SideCard, sidesForMatch } from './MatchSide';
 
 const LEG_LABELS: Record<Leg, string> = {
   IDA: 'Ida',
@@ -18,6 +19,8 @@ export default function FixturesList({
   editionId: number;
 }) {
   const legs: Leg[] = ['IDA', 'VUELTA'];
+  // Single round-robin (partido único) has only IDA matches; label it "Liga".
+  const hasVuelta = matches.some((m) => m.leg === 'VUELTA');
   return (
     <div className="space-y-6">
       {legs.map((leg) => {
@@ -25,11 +28,12 @@ export default function FixturesList({
         if (legMatches.length === 0) return null;
         const played = legMatches.filter((m) => m.status === 'PLAYED').length;
         const pct = Math.round((played / legMatches.length) * 100);
+        const label = leg === 'IDA' && !hasVuelta ? 'Liga' : LEG_LABELS[leg];
         return (
           <div key={leg}>
             <div className="mb-2.5 flex items-center justify-between gap-4">
               <h3 className="font-condensed text-sm font-bold uppercase tracking-[0.18em] text-zinc-300">
-                {LEG_LABELS[leg]}
+                {label}
               </h3>
               <div className="flex items-center gap-2.5">
                 <div className="h-1 w-20 overflow-hidden rounded-full bg-coal-800">
@@ -82,21 +86,27 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
 
   const homeWon = played && (match.homeScore ?? 0) > (match.awayScore ?? 0);
   const awayWon = played && (match.awayScore ?? 0) > (match.homeScore ?? 0);
+  const sides = sidesForMatch(match.id);
 
   return (
     <li className="px-3 py-3 transition hover:bg-white/[0.03]">
       <div className="flex items-center gap-2">
-        {/* Home team */}
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2.5 text-right">
+        {/* Home team card, washed with its (per-match) side color */}
+        <SideCard
+          side={sides.home}
+          edge="left"
+          title={SIDE_LABEL[sides.home]}
+          className="flex min-w-0 flex-1 items-center justify-end gap-2.5 py-1.5 pl-2.5 pr-2 text-right"
+        >
           <span
-            className={`truncate text-[15px] ${
-              homeWon ? 'font-bold text-white' : 'font-medium text-zinc-300'
+            className={`min-w-0 truncate text-[15px] ${
+              homeWon ? 'font-bold text-white' : 'font-medium text-zinc-200'
             }`}
           >
             {match.homeTeam.name}
           </span>
           <TeamCrest name={match.homeTeam.name} size="sm" />
-        </div>
+        </SideCard>
 
         {/* Score */}
         {editing ? (
@@ -113,17 +123,22 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
           </div>
         )}
 
-        {/* Away team */}
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        {/* Away team card, washed with its (per-match) side color */}
+        <SideCard
+          side={sides.away}
+          edge="right"
+          title={SIDE_LABEL[sides.away]}
+          className="flex min-w-0 flex-1 items-center gap-2.5 py-1.5 pl-2 pr-2.5"
+        >
           <TeamCrest name={match.awayTeam.name} size="sm" />
           <span
-            className={`truncate text-[15px] ${
-              awayWon ? 'font-bold text-white' : 'font-medium text-zinc-300'
+            className={`min-w-0 truncate text-[15px] ${
+              awayWon ? 'font-bold text-white' : 'font-medium text-zinc-200'
             }`}
           >
             {match.awayTeam.name}
           </span>
-        </div>
+        </SideCard>
 
         {/* Action */}
         <div className="ml-1 w-[4.75rem] shrink-0 text-right">

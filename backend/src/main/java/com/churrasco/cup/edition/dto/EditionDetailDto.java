@@ -13,6 +13,7 @@ public record EditionDetailDto(
         String name,
         String status,
         boolean test,
+        boolean roundTrip,
         PlayerDto satOutPlayer,
         TeamRefDto champion,
         List<TeamDto> teams,

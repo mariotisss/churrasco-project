@@ -97,9 +97,11 @@ export async function deleteEdition(id: number): Promise<void> {
 export async function drawTeams(
   id: number,
   participantIds?: number[],
+  roundTrip = true,
 ): Promise<EditionDetail> {
   const { data } = await api.post<EditionDetail>(`/editions/${id}/draw`, {
     participantIds: participantIds ?? null,
+    roundTrip,
   });
   return data;
 }

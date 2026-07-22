@@ -30,6 +30,7 @@ public class SchemaMigrations implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         addColumnIfMissing("edition", "is_test", "INTEGER NOT NULL DEFAULT 0");
+        addColumnIfMissing("edition", "round_trip", "INTEGER NOT NULL DEFAULT 1");
     }
 
     private void addColumnIfMissing(String table, String column, String definition) {

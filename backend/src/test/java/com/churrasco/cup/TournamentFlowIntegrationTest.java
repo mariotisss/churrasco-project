@@ -103,6 +103,24 @@ class TournamentFlowIntegrationTest {
     }
 
     @Test
+    void singleRoundDrawGeneratesOneLegAndFlagsTheEdition() {
+        List<Long> playerIds = new ArrayList<>();
+        for (String name : List.of("Leo", "Mia", "Noa", "Ona")) {
+            playerIds.add(playerService.create(new CreatePlayerRequest(name)).id());
+        }
+
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Única Cup", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(playerIds, false));
+
+        // 4 players -> 2 teams, single round-robin -> 1 league match, no VUELTA.
+        assertEquals(2, detail.teams().size());
+        assertEquals(false, detail.roundTrip(), "La edición debe quedar marcada como partido único");
+        List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();
+        assertEquals(1, league.size());
+        assertEquals("IDA", league.get(0).leg());
+    }
+
+    @Test
     void satOutPlayerIsNeverOneWithFewerPlayedMatches() {
         // First edition: four veterans play a full tournament (3 played matches each).
         List<Long> veteranIds = new ArrayList<>();
