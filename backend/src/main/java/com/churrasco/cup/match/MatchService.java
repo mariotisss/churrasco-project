@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class MatchService {
@@ -64,7 +65,7 @@ public class MatchService {
             if (edition.getStatus() == EditionStatus.TEAMS_DRAWN) {
                 edition.setStatus(EditionStatus.IN_PROGRESS);
             }
-            maybeCreateFinalissima(edition);
+            reconcileFinalissima(edition);
         }
         editionRepository.save(edition);
 
@@ -72,14 +73,23 @@ public class MatchService {
     }
 
     /**
-     * When the league is complete (no PENDING matches) and no Finalissima exists yet,
-     * creates it automatically between the 1st and 2nd in the standings.
+     * Keeps the Finalissima consistent with the current standings after any league result
+     * is recorded or edited. When the league is complete (no PENDING matches):
+     * <ul>
+     *   <li>if no Finalissima exists yet, it is created between the 1st and 2nd;</li>
+     *   <li>if one exists but the two finalists no longer match the current top-2, it is
+     *       re-seeded with the correct pair. If that final had already been played, the
+     *       recorded result is dropped and the edition's champion/status are reverted, so a
+     *       result edit can never leave a champion who didn't actually reach the final.</li>
+     * </ul>
+     * An existing final whose finalists are unchanged is left untouched, so correcting an
+     * unrelated result never disturbs an already-decided final.
      */
-    private void maybeCreateFinalissima(Edition edition) {
+    private void reconcileFinalissima(Edition edition) {
         Long editionId = edition.getId();
         boolean leaguePending =
                 matchRepository.existsByEditionIdAndFinalissimaFalseAndStatus(editionId, MatchStatus.PENDING);
-        if (leaguePending || matchRepository.existsByEditionIdAndFinalissimaTrue(editionId)) {
+        if (leaguePending) {
             return;
         }
 
@@ -92,9 +102,31 @@ public class MatchService {
 
         Team first = teamById(teams, standings.get(0).teamId());
         Team second = teamById(teams, standings.get(1).teamId());
-        int nextOrder = leagueMatches.stream().mapToInt(Match::getOrderIndex).max().orElse(-1) + 1;
 
-        matchRepository.save(new Match(edition, first, second, Leg.FINAL, nextOrder, true));
+        Match finalissima = matchRepository.findByEditionIdOrderByOrderIndexAsc(editionId).stream()
+                .filter(Match::isFinalissima)
+                .findFirst()
+                .orElse(null);
+
+        if (finalissima == null) {
+            int nextOrder = leagueMatches.stream().mapToInt(Match::getOrderIndex).max().orElse(-1) + 1;
+            matchRepository.save(new Match(edition, first, second, Leg.FINAL, nextOrder, true));
+            return;
+        }
+
+        Set<Long> currentFinalists = Set.of(finalissima.getHomeTeam().getId(), finalissima.getAwayTeam().getId());
+        Set<Long> qualifiedFinalists = Set.of(first.getId(), second.getId());
+        if (currentFinalists.equals(qualifiedFinalists)) {
+            return; // same pair reaches the final; leave the existing (possibly played) final as is
+        }
+
+        // The finalists changed: re-seed the final and undo any decided outcome.
+        finalissima.reseed(first, second);
+        matchRepository.save(finalissima);
+        edition.setChampionTeamId(null);
+        if (edition.getStatus() == EditionStatus.FINISHED) {
+            edition.setStatus(EditionStatus.IN_PROGRESS);
+        }
     }
 
     private Team teamById(List<Team> teams, Long id) {

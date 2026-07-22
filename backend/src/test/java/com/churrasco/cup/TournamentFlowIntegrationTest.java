@@ -21,10 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -148,6 +150,112 @@ class TournamentFlowIntegrationTest {
             assertNotEquals(rookieId, detail.satOutPlayer().id(),
                     "El jugador con menos partidos que el resto no puede quedarse fuera");
         }
+    }
+
+    @Test
+    void editingLeagueResultReseedsThePendingFinalissima() {
+        List<Long> ids = createPlayers("P1", "P2", "P3", "P4", "P5", "P6");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Reseed Cup", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids));
+        assertEquals(3, detail.teams().size(), "6 jugadores -> 3 equipos");
+
+        long a = detail.teams().get(0).id(); // will always win
+        long b = detail.teams().get(1).id();
+        long c = detail.teams().get(2).id();
+
+        // A wins everything and B beats C -> standings A, B, C -> Finalissima A vs B.
+        EditionDetailDto afterLeague = recordLeague(edition.id(), a, b);
+        assertNotNull(afterLeague.finalissima(), "La Finalissima debe generarse al completar la liga");
+        assertEquals(Set.of(a, b), finalists(afterLeague.finalissima()));
+        assertEquals("PENDING", afterLeague.finalissima().status());
+
+        // Correct the B–C results so C now finishes 2nd -> the final must be re-seeded to A vs C.
+        EditionDetailDto reseeded = recordLeague(edition.id(), a, c);
+        assertEquals(Set.of(a, c), finalists(reseeded.finalissima()),
+                "Editar la liga debe re-sembrar la Finalissima con el nuevo top-2");
+        assertEquals("PENDING", reseeded.finalissima().status());
+        assertNull(reseeded.champion());
+        assertEquals("IN_PROGRESS", reseeded.status());
+    }
+
+    @Test
+    void editingLeagueResultAfterFinalRevertsChampionWhenFinalistsChange() {
+        List<Long> ids = createPlayers("Q1", "Q2", "Q3", "Q4", "Q5", "Q6");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Revert Cup", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids));
+
+        long a = detail.teams().get(0).id();
+        long b = detail.teams().get(1).id();
+        long c = detail.teams().get(2).id();
+
+        EditionDetailDto afterLeague = recordLeague(edition.id(), a, b); // final A vs B
+        EditionDetailDto finished =
+                matchService.recordResult(afterLeague.finalissima().id(), new MatchResultRequest(6, 3));
+        assertEquals("FINISHED", finished.status());
+        assertNotNull(finished.champion());
+
+        // Correct the league so C replaces B in the top-2: the played final is no longer valid.
+        EditionDetailDto reverted = recordLeague(edition.id(), a, c);
+        assertEquals(Set.of(a, c), finalists(reverted.finalissima()));
+        assertEquals("PENDING", reverted.finalissima().status(), "La final re-sembrada vuelve a estar por jugar");
+        assertNull(reverted.champion(), "El campeón obsoleto debe revertirse");
+        assertEquals("IN_PROGRESS", reverted.status());
+    }
+
+    @Test
+    void editingLeagueResultThatKeepsFinalistsPreservesTheChampion() {
+        List<Long> ids = createPlayers("R1", "R2", "R3", "R4", "R5", "R6");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Stable Cup", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids));
+
+        long a = detail.teams().get(0).id();
+        long b = detail.teams().get(1).id();
+
+        EditionDetailDto afterLeague = recordLeague(edition.id(), a, b); // final A vs B
+        EditionDetailDto finished =
+                matchService.recordResult(afterLeague.finalissima().id(), new MatchResultRequest(6, 3));
+        Long championId = finished.champion().id();
+        assertEquals("FINISHED", finished.status());
+
+        // Re-record the same outcome (A 1st, B 2nd) -> finalists unchanged, so nothing is disturbed.
+        EditionDetailDto edited = recordLeague(edition.id(), a, b);
+        assertEquals("FINISHED", edited.status(), "Un cambio que no altera el top-2 no debe tocar la final");
+        assertEquals(championId, edited.champion().id());
+        assertEquals("PLAYED", edited.finalissima().status());
+    }
+
+    /**
+     * Records (or re-records) every league match so {@code strong} wins all of its games and,
+     * among the other two teams, {@code bcWinner} wins their head-to-head. Winner scores 5–1.
+     * Returns the edition detail after the last league match, so the Finalissima is reflected.
+     */
+    private EditionDetailDto recordLeague(Long editionId, long strong, long bcWinner) {
+        EditionDetailDto detail = editionService.getDetail(editionId);
+        EditionDetailDto last = detail;
+        for (MatchDto m : detail.matches()) {
+            if (m.finalissima()) {
+                continue;
+            }
+            long home = m.homeTeam().id();
+            long away = m.awayTeam().id();
+            long winner = (home == strong || away == strong) ? strong : bcWinner;
+            int homeScore = home == winner ? 5 : 1;
+            int awayScore = home == winner ? 1 : 5;
+            last = matchService.recordResult(m.id(), new MatchResultRequest(homeScore, awayScore));
+        }
+        return last;
+    }
+
+    private static Set<Long> finalists(MatchDto finalissima) {
+        return Set.of(finalissima.homeTeam().id(), finalissima.awayTeam().id());
+    }
+
+    private List<Long> createPlayers(String... names) {
+        List<Long> ids = new ArrayList<>();
+        for (String name : names) {
+            ids.add(playerService.create(new CreatePlayerRequest(name)).id());
+        }
+        return ids;
     }
 
     @Test

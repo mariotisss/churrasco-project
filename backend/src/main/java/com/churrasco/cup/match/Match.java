@@ -80,6 +80,19 @@ public class Match {
         this.playedAt = Instant.now();
     }
 
+    /**
+     * Re-seeds this match for a new pair of teams, discarding any recorded result.
+     * Used when a league-result edit changes who qualifies for the Finalissima.
+     */
+    public void reseed(Team homeTeam, Team awayTeam) {
+        this.homeTeam = homeTeam;
+        this.awayTeam = awayTeam;
+        this.homeScore = null;
+        this.awayScore = null;
+        this.status = MatchStatus.PENDING;
+        this.playedAt = null;
+    }
+
     public Long getId() {
         return id;
     }
