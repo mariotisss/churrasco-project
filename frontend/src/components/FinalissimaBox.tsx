@@ -13,7 +13,7 @@ export default function FinalissimaBox({
   editionId: number;
 }) {
   const decided = finalissima.status === 'PLAYED';
-  const sides = sidesForMatch(finalissima.id);
+  const sides = sidesForMatch(finalissima.leg);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-ember-500/40 bg-gradient-to-b from-coal-850/90 to-coal-900/95 shadow-card">

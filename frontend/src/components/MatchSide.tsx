@@ -1,9 +1,14 @@
 // Each futbolín fixture is played on one of two sides of the table: the
-// red-and-white (rojiblanco) side or the blue (azul) side. Which team plays
-// which side is cosmetic, so we assign it per match — scattered, but stable —
-// and paint it as a colored wash behind the team's card.
+// red-and-white (rojiblanco) side or the blue (azul) side, painted as a colored
+// wash behind each team's card.
+//
+// The rojiblanco side sits on the LEFT in the ida and on the RIGHT in the vuelta.
+// Since the schedule swaps home/away between legs (home is always drawn on the
+// left), this keeps each pairing's colors consistent while flipping their sides:
+// every team ends up playing its ida and its vuelta once on each side of the table.
 
 import type { CSSProperties, ReactNode } from 'react';
+import type { Leg } from '../api/types';
 
 export type Side = 'rojiblanco' | 'azul';
 
@@ -13,22 +18,14 @@ export const SIDE_LABEL: Record<Side, string> = {
 };
 
 /**
- * Stable pseudo-random side assignment for a match: half the fixtures put the
- * home team on the rojiblanco side, half on the azul side, so the colors mix
- * across the list instead of every home team landing on red. Keyed on the match
- * id so it never changes between renders.
+ * Side assignment by leg. Home is rendered on the left, away on the right, so:
+ *   - IDA (and the final / single-round league): rojiblanco on the left.
+ *   - VUELTA: rojiblanco on the right (home/away are swapped for the return leg).
  */
-export function sidesForMatch(matchId: number): { home: Side; away: Side } {
-  return hashBit(matchId)
-    ? { home: 'rojiblanco', away: 'azul' }
-    : { home: 'azul', away: 'rojiblanco' };
-}
-
-function hashBit(n: number): boolean {
-  let h = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b);
-  h ^= h >>> 13;
-  h = Math.imul(h, 0xc2b2ae35);
-  return ((h >>> 15) & 1) === 1;
+export function sidesForMatch(leg: Leg): { home: Side; away: Side } {
+  return leg === 'VUELTA'
+    ? { home: 'azul', away: 'rojiblanco' }
+    : { home: 'rojiblanco', away: 'azul' };
 }
 
 // Decorative layer painted behind the card content. `edge` is where the card

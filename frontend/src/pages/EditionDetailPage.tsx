@@ -14,6 +14,7 @@ import DrawRevealOverlay from '../components/DrawRevealOverlay';
 import TeamCrest from '../components/TeamCrest';
 import TeamLineup from '../components/TeamLineup';
 import RoadToFinal from '../components/RoadToFinal';
+import FinalissimaOdds from '../components/FinalissimaOdds';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { SIDE_LABEL, SideCard, sidesForMatch } from '../components/MatchSide';
 
@@ -144,6 +145,7 @@ export default function EditionDetailPage() {
                 <h2 className="lower-third mb-3">Camino al título</h2>
                 <RoadToFinal detail={edition} />
               </div>
+              <FinalissimaOdds detail={edition} />
               <NextUpAndFinal edition={edition} />
             </div>
           )}
@@ -189,7 +191,7 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
           <h2 className="lower-third mb-3">Próximo partido</h2>
           <div className="panel flex flex-wrap items-center justify-center gap-x-3 gap-y-2 p-5">
             {(() => {
-              const sides = sidesForMatch(next.id);
+              const sides = sidesForMatch(next.leg);
               return (
                 <>
                   <SideCard

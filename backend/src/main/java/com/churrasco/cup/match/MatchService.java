@@ -47,8 +47,10 @@ public class MatchService {
         int homeScore = request.homeScore();
         int awayScore = request.awayScore();
 
-        if (match.isFinalissima() && homeScore == awayScore) {
-            throw new BadRequestException("La Finalissima no puede terminar en empate");
+        if (homeScore == awayScore) {
+            throw new BadRequestException(match.isFinalissima()
+                    ? "La Finalissima no puede terminar en empate"
+                    : "Ningún partido puede terminar en empate");
         }
 
         match.recordResult(homeScore, awayScore);
@@ -73,6 +75,45 @@ public class MatchService {
     }
 
     /**
+     * Removes a match's recorded result, reverting it to PENDING (as if never played).
+     * A blanked score must never linger as a 0-0 draw. Clearing a league result may make
+     * the league incomplete again, so the Finalissima and champion are reconciled; clearing
+     * the Finalissima simply un-decides the edition.
+     */
+    @Transactional
+    public EditionDetailDto clearResult(Long matchId) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new NotFoundException("Partido " + matchId + " no encontrado"));
+
+        if (match.getStatus() == MatchStatus.PENDING) {
+            // Nothing recorded yet; return the current state unchanged.
+            return editionService.getDetail(match.getEdition().getId());
+        }
+
+        Edition edition = match.getEdition();
+        match.clearResult();
+        matchRepository.save(match);
+
+        if (match.isFinalissima()) {
+            edition.setChampionTeamId(null);
+            if (edition.getStatus() == EditionStatus.FINISHED) {
+                edition.setStatus(EditionStatus.IN_PROGRESS);
+            }
+        } else {
+            reconcileFinalissima(edition);
+            // If no league match remains played, the edition is effectively back to just-drawn.
+            boolean anyLeaguePlayed = matchRepository
+                    .existsByEditionIdAndFinalissimaFalseAndStatus(edition.getId(), MatchStatus.PLAYED);
+            if (!anyLeaguePlayed && edition.getStatus() == EditionStatus.IN_PROGRESS) {
+                edition.setStatus(EditionStatus.TEAMS_DRAWN);
+            }
+        }
+        editionRepository.save(edition);
+
+        return editionService.getDetail(edition.getId());
+    }
+
+    /**
      * Keeps the Finalissima consistent with the current standings after any league result
      * is recorded or edited. When the league is complete (no PENDING matches):
      * <ul>
@@ -83,13 +124,28 @@ public class MatchService {
      *       result edit can never leave a champion who didn't actually reach the final.</li>
      * </ul>
      * An existing final whose finalists are unchanged is left untouched, so correcting an
-     * unrelated result never disturbs an already-decided final.
+     * unrelated result never disturbs an already-decided final. If a cleared result leaves
+     * the league incomplete again, any existing Finalissima is premature and is removed.
      */
     private void reconcileFinalissima(Edition edition) {
         Long editionId = edition.getId();
+        Match finalissima = matchRepository.findByEditionIdOrderByOrderIndexAsc(editionId).stream()
+                .filter(Match::isFinalissima)
+                .findFirst()
+                .orElse(null);
+
         boolean leaguePending =
                 matchRepository.existsByEditionIdAndFinalissimaFalseAndStatus(editionId, MatchStatus.PENDING);
         if (leaguePending) {
+            // The league is no longer complete: drop a premature Finalissima and undo any
+            // champion it had decided, so a cleared result never leaves a stale final.
+            if (finalissima != null) {
+                matchRepository.delete(finalissima);
+                edition.setChampionTeamId(null);
+                if (edition.getStatus() == EditionStatus.FINISHED) {
+                    edition.setStatus(EditionStatus.IN_PROGRESS);
+                }
+            }
             return;
         }
 
@@ -102,11 +158,6 @@ public class MatchService {
 
         Team first = teamById(teams, standings.get(0).teamId());
         Team second = teamById(teams, standings.get(1).teamId());
-
-        Match finalissima = matchRepository.findByEditionIdOrderByOrderIndexAsc(editionId).stream()
-                .filter(Match::isFinalissima)
-                .findFirst()
-                .orElse(null);
 
         if (finalissima == null) {
             int nextOrder = leagueMatches.stream().mapToInt(Match::getOrderIndex).max().orElse(-1) + 1;

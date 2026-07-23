@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query';
 import type { EditionDetail } from './types';
 import {
+  clearResult,
   createEdition,
   createPenalty,
   createPlayer,
@@ -166,6 +167,16 @@ export function useRecordResult(editionId: number) {
       recordResult(vars.matchId, vars.homeScore, vars.awayScore),
     onSuccess: (detail) => cacheEdition(qc, detail),
     // editionId pins the hook's type to the right edition detail.
+    meta: { editionId },
+  });
+}
+
+/** Clears a recorded result, reverting the match to "not played". */
+export function useClearResult(editionId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { matchId: number }) => clearResult(vars.matchId),
+    onSuccess: (detail) => cacheEdition(qc, detail),
     meta: { editionId },
   });
 }

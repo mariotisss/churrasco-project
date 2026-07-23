@@ -275,4 +275,62 @@ class TournamentFlowIntegrationTest {
         assertThrows(RuntimeException.class,
                 () -> matchService.recordResult(finalissimaId, new MatchResultRequest(3, 3)));
     }
+
+    @Test
+    void leagueMatchCannotEndInDraw() {
+        List<Long> ids = createPlayers("Da1", "Da2", "Da3", "Da4");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Liga Empate", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids));
+
+        Long leagueMatchId = detail.matches().stream()
+                .filter(m -> !m.finalissima()).findFirst().orElseThrow().id();
+        assertThrows(RuntimeException.class,
+                () -> matchService.recordResult(leagueMatchId, new MatchResultRequest(4, 4)),
+                "Ningún partido de liga puede terminar en empate");
+    }
+
+    @Test
+    void clearingLeagueResultRevertsMatchAndRemovesPrematureFinalissima() {
+        List<Long> ids = createPlayers("Cl1", "Cl2", "Cl3", "Cl4");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Clear Cup", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids));
+
+        List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();
+        assertEquals(2, league.size());
+        matchService.recordResult(league.get(0).id(), new MatchResultRequest(5, 2));
+        EditionDetailDto afterLeague =
+                matchService.recordResult(league.get(1).id(), new MatchResultRequest(1, 4));
+        assertNotNull(afterLeague.finalissima(), "La Finalissima se crea al completar la liga");
+
+        // Clearing a league result leaves the league incomplete: the match reverts and the
+        // premature Finalissima is dropped (no lingering 0-0).
+        EditionDetailDto cleared = matchService.clearResult(league.get(0).id());
+        MatchDto reverted = cleared.matches().stream()
+                .filter(m -> m.id().equals(league.get(0).id())).findFirst().orElseThrow();
+        assertEquals("PENDING", reverted.status());
+        assertNull(reverted.homeScore(), "El marcador quitado no debe quedar como 0-0");
+        assertNull(reverted.awayScore());
+        assertNull(cleared.finalissima(), "La Finalissima prematura debe eliminarse");
+    }
+
+    @Test
+    void clearingLeagueResultAfterFinalRevertsChampion() {
+        List<Long> ids = createPlayers("Cx1", "Cx2", "Cx3", "Cx4");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Clear Champ", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids));
+
+        List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();
+        matchService.recordResult(league.get(0).id(), new MatchResultRequest(5, 2));
+        EditionDetailDto afterLeague =
+                matchService.recordResult(league.get(1).id(), new MatchResultRequest(1, 4));
+        EditionDetailDto finished =
+                matchService.recordResult(afterLeague.finalissima().id(), new MatchResultRequest(6, 3));
+        assertEquals("FINISHED", finished.status());
+        assertNotNull(finished.champion());
+
+        EditionDetailDto cleared = matchService.clearResult(league.get(0).id());
+        assertNull(cleared.finalissima(), "La final jugada se descarta al quedar la liga incompleta");
+        assertNull(cleared.champion(), "El campeón obsoleto debe revertirse");
+        assertEquals("IN_PROGRESS", cleared.status());
+    }
 }

@@ -81,6 +81,17 @@ public class Match {
     }
 
     /**
+     * Clears any recorded result, reverting the match to an unplayed (PENDING) state.
+     * Used when a result is removed so a blanked score never lingers as a 0-0 draw.
+     */
+    public void clearResult() {
+        this.homeScore = null;
+        this.awayScore = null;
+        this.status = MatchStatus.PENDING;
+        this.playedAt = null;
+    }
+
+    /**
      * Re-seeds this match for a new pair of teams, discarding any recorded result.
      * Used when a league-result edit changes who qualifies for the Finalissima.
      */

@@ -123,3 +123,9 @@ export async function recordResult(
   });
   return data;
 }
+
+/** Removes a match result, reverting it to "not played" (never a lingering 0-0). */
+export async function clearResult(matchId: number): Promise<EditionDetail> {
+  const { data } = await api.delete<EditionDetail>(`/matches/${matchId}/result`);
+  return data;
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRecordResult } from '../api/hooks';
+import { useClearResult, useRecordResult } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { Leg, MatchDto } from '../api/types';
 import TeamCrest from './TeamCrest';
@@ -61,17 +61,52 @@ export default function FixturesList({
 
 export function MatchRow({ match, editionId }: { match: MatchDto; editionId: number }) {
   const recordResult = useRecordResult(editionId);
+  const clearResult = useClearResult(editionId);
   const played = match.status === 'PLAYED';
   const [editing, setEditing] = useState(!played);
   const [home, setHome] = useState(match.homeScore?.toString() ?? '');
   const [away, setAway] = useState(match.awayScore?.toString() ?? '');
   const [error, setError] = useState<string | null>(null);
 
+  function clear() {
+    setError(null);
+    clearResult.mutate(
+      { matchId: match.id },
+      {
+        // Reset the editor to a blank, "not played" state (no lingering 0-0).
+        onSuccess: () => {
+          setHome('');
+          setAway('');
+          setEditing(true);
+        },
+        onError: (err) => setError(apiErrorMessage(err)),
+      },
+    );
+  }
+
   function save() {
+    const homeBlank = home.trim() === '';
+    const awayBlank = away.trim() === '';
+
+    // Blanking both scores removes the result (a match is never stored as a draw).
+    if (homeBlank && awayBlank) {
+      if (played) clear();
+      else setError('Introduce un marcador');
+      return;
+    }
+    if (homeBlank || awayBlank) {
+      setError('Rellena ambos marcadores o bórralos para quitar el resultado');
+      return;
+    }
+
     const h = Number(home);
     const a = Number(away);
     if (!Number.isInteger(h) || !Number.isInteger(a) || h < 0 || a < 0) {
       setError('Marcadores no válidos');
+      return;
+    }
+    if (h === a) {
+      setError('No puede haber empates');
       return;
     }
     setError(null);
@@ -86,7 +121,7 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
 
   const homeWon = played && (match.homeScore ?? 0) > (match.awayScore ?? 0);
   const awayWon = played && (match.awayScore ?? 0) > (match.homeScore ?? 0);
-  const sides = sidesForMatch(match.id);
+  const sides = sidesForMatch(match.leg);
 
   return (
     <li className="px-3 py-3 transition hover:bg-white/[0.03]">
@@ -141,15 +176,26 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
         </SideCard>
 
         {/* Action */}
-        <div className="ml-1 w-[4.75rem] shrink-0 text-right">
+        <div className="ml-1 flex w-[4.75rem] shrink-0 flex-col items-end gap-1">
           {editing ? (
-            <button
-              onClick={save}
-              disabled={recordResult.isPending}
-              className="btn-primary px-3 py-1.5 text-xs"
-            >
-              Guardar
-            </button>
+            <>
+              <button
+                onClick={save}
+                disabled={recordResult.isPending || clearResult.isPending}
+                className="btn-primary w-full px-3 py-1.5 text-xs"
+              >
+                Guardar
+              </button>
+              {played && (
+                <button
+                  onClick={clear}
+                  disabled={recordResult.isPending || clearResult.isPending}
+                  className="font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-500 transition hover:text-rose-300 disabled:opacity-50"
+                >
+                  Quitar
+                </button>
+              )}
+            </>
           ) : (
             <button onClick={() => setEditing(true)} className="btn-ghost text-xs">
               Editar
