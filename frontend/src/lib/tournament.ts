@@ -4,11 +4,38 @@
 
 import type { EditionDetail, EditionSummary, MatchDto, StandingRow } from '../api/types';
 
-const LEG_ORDER: Record<string, number> = { IDA: 0, VUELTA: 1, FINAL: 2 };
+const LEG_ORDER: Record<string, number> = { IDA: 0, VUELTA: 1, SEMIFINAL: 2, FINAL: 3 };
 
-/** League matches only (everything except the Finalissima). */
+/** Teams that reach the semifinals in the single-round format. */
+const SEMIFINAL_SPOTS = 4;
+
+/** League matches only (everything except the semifinals and the Finalissima). */
 export function leagueMatches(matches: MatchDto[]): MatchDto[] {
-  return matches.filter((m) => !m.finalissima);
+  return matches.filter((m) => !m.playoff);
+}
+
+/**
+ * Whether this edition's league is followed by semifinals (1º-4º, 2º-3º). Only the
+ * single-round format uses them, and only with enough teams to fill the bracket —
+ * the same rule the backend enforces when drawing.
+ */
+export function hasSemifinals(detail: EditionDetail): boolean {
+  return !detail.roundTrip && detail.teams.length >= SEMIFINAL_SPOTS;
+}
+
+/** How many teams the league qualifies: the top 4 (semifinals) or the top 2 (final). */
+export function playoffSpots(detail: EditionDetail): number {
+  return hasSemifinals(detail) ? SEMIFINAL_SPOTS : 2;
+}
+
+/**
+ * The places the league is actually racing for. Normally the playoff spots, but when
+ * every team qualifies (4 teams, 4 semifinal places) nobody is fighting to get in:
+ * what's at stake is finishing 1st, which picks the easiest tie and chooses the side.
+ */
+export function oddsSpots(detail: EditionDetail): number {
+  const spots = playoffSpots(detail);
+  return detail.teams.length > spots ? spots : 1;
 }
 
 /** Chronological-ish ordering: IDA before VUELTA, then by orderIndex. */
@@ -86,16 +113,18 @@ export function palmares(editions: EditionSummary[]): EditionSummary[] {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-// ---- Finalissima odds ------------------------------------------------------
-// The top 2 of the league reach the Finalissima. We estimate each team's chance
-// of finishing top-2 with a Monte Carlo simulation: from the results already
-// played, we replay the pending fixtures many times (each a coin-flip win — no
-// draws) and count how often each team lands in the top two.
+// ---- Qualification odds ----------------------------------------------------
+// The league qualifies its top teams for the playoffs (top 4 to the semifinals, or
+// top 2 straight to the Finalissima) — or, when everyone is already in, it is the top
+// seed that's at stake. We estimate each team's chance of landing in those places with
+// a Monte Carlo simulation: from the results already played, we replay the pending
+// fixtures many times (each a coin-flip win — no draws) and count how often each team
+// ends up inside them.
 
 export interface TeamOdds {
   teamId: number;
   teamName: string;
-  /** Probability of reaching the Finalissima, 0..1. */
+  /** Probability of ending up in one of the places at stake, 0..1. */
   probability: number;
 }
 
@@ -130,18 +159,19 @@ function mulberry32(seed: number): () => number {
 }
 
 /**
- * Estimated probability that each team reaches the Finalissima (finishes top-2),
- * given the results so far and the fixtures still to play. Returned sorted by
- * probability (highest first). Empty when there is no meaningful race (fewer than
- * 3 teams, or the league already has a fixed top-2).
+ * Estimated probability that each team ends up in the places at stake (see
+ * {@link oddsSpots}), given the results so far and the fixtures still to play.
+ * Returned sorted by probability (highest first). Empty once the league is over,
+ * when there is nothing left to estimate.
  */
-export function finalissimaOdds(detail: EditionDetail): TeamOdds[] {
+export function qualificationOdds(detail: EditionDetail): TeamOdds[] {
   const teams = detail.teams;
-  if (teams.length < 3) return [];
+  const spots = oddsSpots(detail);
+  if (teams.length < 2) return [];
 
   const league = leagueMatches(detail.matches);
   const pending = league.filter((m) => m.status === 'PENDING');
-  if (pending.length === 0) return []; // top-2 already settled
+  if (pending.length === 0) return []; // everything is already settled
 
   // Base table from matches already played.
   const base = new Map<number, OddsAcc>();
@@ -183,8 +213,8 @@ export function finalissimaOdds(detail: EditionDetail): TeamOdds[] {
   for (const m of pending) mix(m.id);
   const rand = mulberry32(seed);
 
-  const top2 = new Map<number, number>();
-  for (const t of teams) top2.set(t.id, 0);
+  const qualified = new Map<number, number>();
+  for (const t of teams) qualified.set(t.id, 0);
 
   for (let s = 0; s < SIMULATIONS; s++) {
     const acc = new Map<number, OddsAcc>();
@@ -213,15 +243,16 @@ export function finalissimaOdds(detail: EditionDetail): TeamOdds[] {
     }
 
     const ranked = [...acc.entries()].sort((x, y) => compareAcc(x[1], y[1]));
-    top2.set(ranked[0][0], (top2.get(ranked[0][0]) ?? 0) + 1);
-    top2.set(ranked[1][0], (top2.get(ranked[1][0]) ?? 0) + 1);
+    for (const [teamId] of ranked.slice(0, spots)) {
+      qualified.set(teamId, (qualified.get(teamId) ?? 0) + 1);
+    }
   }
 
   return teams
     .map((t) => ({
       teamId: t.id,
       teamName: t.name,
-      probability: (top2.get(t.id) ?? 0) / SIMULATIONS,
+      probability: (qualified.get(t.id) ?? 0) / SIMULATIONS,
     }))
     .sort((a, b) => b.probability - a.probability || a.teamName.localeCompare(b.teamName));
 }

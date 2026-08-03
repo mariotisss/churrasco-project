@@ -30,9 +30,12 @@ function FormGuide({ results }: { results: FormResult[] }) {
 export default function StandingsTable({
   rows,
   form,
+  qualifyingSpots = 2,
 }: {
   rows: StandingRow[];
   form?: Map<number, FormResult[]>;
+  /** How many places qualify for the playoffs: 4 (semifinals) or 2 (direct final). */
+  qualifyingSpots?: number;
 }) {
   if (rows.length === 0) {
     return (
@@ -59,21 +62,21 @@ export default function StandingsTable({
           </thead>
           <tbody>
             {rows.map((row) => {
-              const top2 = row.position <= 2;
+              const qualifies = row.position <= qualifyingSpots;
               return (
                 <tr
                   key={row.teamId}
                   className={`group border-b border-coal-800/70 transition last:border-0 hover:bg-white/[0.03] ${
-                    top2 ? 'bg-emerald-500/[0.05]' : ''
+                    qualifies ? 'bg-emerald-500/[0.05]' : ''
                   }`}
                 >
                   <td className="relative py-3 pl-4 pr-2">
-                    {top2 && (
+                    {qualifies && (
                       <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-emerald-400 to-emerald-600" />
                     )}
                     <span
                       className={`inline-grid h-7 w-7 place-items-center rounded-lg font-condensed text-sm font-bold tabular-nums ${
-                        top2
+                        qualifies
                           ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30'
                           : 'text-zinc-500'
                       }`}
@@ -118,7 +121,9 @@ export default function StandingsTable({
       </div>
       <div className="flex items-center gap-2 border-t border-coal-700/70 px-4 py-3 font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-500">
         <span className="h-3 w-1.5 rounded-sm bg-gradient-to-b from-emerald-400 to-emerald-600" />
-        Los 2 primeros disputan la Finalissima
+        {qualifyingSpots >= 4
+          ? `Los ${qualifyingSpots} primeros juegan las semifinales`
+          : `Los ${qualifyingSpots} primeros disputan la Finalissima`}
       </div>
     </div>
   );

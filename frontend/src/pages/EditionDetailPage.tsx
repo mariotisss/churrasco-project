@@ -3,20 +3,20 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useDeleteEdition, useEdition } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { EditionDetail, TeamDto } from '../api/types';
-import { formByTeam, leagueMatches, leagueProgress, nextPendingMatch } from '../lib/tournament';
+import { formByTeam, leagueProgress, nextPendingMatch, playoffSpots } from '../lib/tournament';
 import StatusBadge from '../components/StatusBadge';
 import TestBadge from '../components/TestBadge';
 import StandingsTable from '../components/StandingsTable';
-import FixturesList from '../components/FixturesList';
+import FixturesList, { MatchRow } from '../components/FixturesList';
 import FinalissimaBox from '../components/FinalissimaBox';
 import TeamDrawPanel from '../components/TeamDrawPanel';
 import DrawRevealOverlay from '../components/DrawRevealOverlay';
 import TeamCrest from '../components/TeamCrest';
 import TeamLineup from '../components/TeamLineup';
 import RoadToFinal from '../components/RoadToFinal';
-import FinalissimaOdds from '../components/FinalissimaOdds';
+import QualificationOdds from '../components/QualificationOdds';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { SIDE_LABEL, SideCard, sidesForMatch } from '../components/MatchSide';
+import { SideCard, sidesForMatch } from '../components/MatchSide';
 
 type Tab = 'resumen' | 'clasificacion' | 'partidos' | 'equipos';
 
@@ -55,7 +55,6 @@ export default function EditionDetailPage() {
     );
   }
 
-  const league = leagueMatches(edition.matches);
   const { played, total } = leagueProgress(edition);
   const hasTeams = edition.teams.length > 0;
 
@@ -145,7 +144,7 @@ export default function EditionDetailPage() {
                 <h2 className="lower-third mb-3">Camino al título</h2>
                 <RoadToFinal detail={edition} />
               </div>
-              <FinalissimaOdds detail={edition} />
+              <QualificationOdds detail={edition} />
               <NextUpAndFinal edition={edition} />
             </div>
           )}
@@ -155,13 +154,18 @@ export default function EditionDetailPage() {
               <StandingsTable
                 rows={edition.standings}
                 form={formByTeam(edition.standings, edition.matches)}
+                qualifyingSpots={playoffSpots(edition)}
               />
             </div>
           )}
 
           {tab === 'partidos' && (
             <div className="animate-fade-in">
-              <FixturesList matches={league} editionId={edition.id} />
+              {/* The Finalissima has its own box in the summary, so it stays out of the list. */}
+              <FixturesList
+                matches={edition.matches.filter((m) => m.leg !== 'FINAL')}
+                editionId={edition.id}
+              />
             </div>
           )}
 
@@ -181,8 +185,10 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
   const next = nextPendingMatch(edition.matches);
   const fin = edition.finalissima;
   const finalPending = fin && fin.status !== 'PLAYED';
+  // Once the league is over the semifinals are what's next, and they need their scores.
+  const semisPending = edition.semifinals.some((m) => m.status !== 'PLAYED');
 
-  if (!next && !finalPending) return null;
+  if (!next && !semisPending && !finalPending) return null;
 
   return (
     <div className="space-y-6">
@@ -191,13 +197,12 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
           <h2 className="lower-third mb-3">Próximo partido</h2>
           <div className="panel flex flex-wrap items-center justify-center gap-x-3 gap-y-2 p-5">
             {(() => {
-              const sides = sidesForMatch(next.leg);
+              const sides = sidesForMatch(next);
               return (
                 <>
                   <SideCard
-                    side={sides.home}
+                    side={sides?.home ?? null}
                     edge="left"
-                    title={SIDE_LABEL[sides.home]}
                     className="flex min-w-0 items-center gap-2 py-1.5 pl-2.5 pr-3"
                   >
                     <TeamCrest name={next.homeTeam.name} size="md" />
@@ -207,9 +212,8 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
                   </SideCard>
                   <span className="font-display text-lg text-ember-400">VS</span>
                   <SideCard
-                    side={sides.away}
+                    side={sides?.away ?? null}
                     edge="right"
-                    title={SIDE_LABEL[sides.away]}
                     className="flex min-w-0 items-center gap-2 py-1.5 pl-3 pr-2.5"
                   >
                     <span className="truncate text-[15px] font-semibold text-zinc-100">
@@ -221,6 +225,19 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
               );
             })()}
           </div>
+        </div>
+      )}
+      {semisPending && (
+        <div>
+          <h2 className="lower-third mb-3">Semifinales</h2>
+          <p className="mb-3 font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            1º–4º y 2º–3º · el mejor clasificado elige lado
+          </p>
+          <ul className="panel divide-y divide-coal-800/70">
+            {edition.semifinals.map((match) => (
+              <MatchRow key={match.id} match={match} editionId={edition.id} />
+            ))}
+          </ul>
         </div>
       )}
       {finalPending && (

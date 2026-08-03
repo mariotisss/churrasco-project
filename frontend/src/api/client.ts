@@ -5,6 +5,7 @@ import type {
   Penalty,
   Player,
   PlayerStanding,
+  Side,
   StandingRow,
 } from './types';
 
@@ -127,5 +128,11 @@ export async function recordResult(
 /** Removes a match result, reverting it to "not played" (never a lingering 0-0). */
 export async function clearResult(matchId: number): Promise<EditionDetail> {
   const { data } = await api.delete<EditionDetail>(`/matches/${matchId}/result`);
+  return data;
+}
+
+/** Picks the side of the table for a playoff match (only the home team chooses). */
+export async function chooseSide(matchId: number, side: Side): Promise<EditionDetail> {
+  const { data } = await api.put<EditionDetail>(`/matches/${matchId}/side`, { side });
   return data;
 }

@@ -19,19 +19,26 @@ export interface TeamDto {
   player2: Player;
 }
 
-export type Leg = 'IDA' | 'VUELTA' | 'FINAL';
+export type Leg = 'IDA' | 'VUELTA' | 'SEMIFINAL' | 'FINAL';
 export type MatchStatus = 'PENDING' | 'PLAYED';
+
+/** The two sides of the futbolín table. */
+export type Side = 'ROJIBLANCO' | 'AZUL';
 
 export interface MatchDto {
   id: number;
   leg: Leg;
   orderIndex: number;
+  /** In a playoff match the home team is the better classified: the one that picks the side. */
   homeTeam: TeamRef;
   awayTeam: TeamRef;
   homeScore: number | null;
   awayScore: number | null;
   status: MatchStatus;
-  finalissima: boolean;
+  /** true = semifinal or Finalissima; these never count for the league table. */
+  playoff: boolean;
+  /** Side picked by the home team of a playoff match, null while nobody has picked. */
+  chosenSide: Side | null;
   playedAt: string | null;
 }
 
@@ -90,5 +97,7 @@ export interface EditionDetail {
   teams: TeamDto[];
   standings: StandingRow[];
   matches: MatchDto[];
+  /** 1º vs 4º and 2º vs 3º; only in the single-round format, once the league is over. */
+  semifinals: MatchDto[];
   finalissima: MatchDto | null;
 }

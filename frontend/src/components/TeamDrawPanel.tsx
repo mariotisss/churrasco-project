@@ -46,6 +46,14 @@ export default function TeamDrawPanel({
 
   const selectedCount = selected?.length ?? 0;
   const canDraw = selectedCount >= 4;
+  // A una vuelta la liga es demasiado corta para decidir nada, así que se remata con
+  // semifinales: hacen falta 4 equipos, o sea 8 jugadores (con impar uno se queda fuera).
+  const canSingleRound = Math.floor(selectedCount / 2) >= 4;
+
+  // Si la selección se queda corta, el partido único deja de estar disponible.
+  useEffect(() => {
+    if (selected !== null && !canSingleRound) setRoundTrip(true);
+  }, [selected, canSingleRound]);
 
   return (
     <div className="panel space-y-4 p-5">
@@ -122,15 +130,21 @@ export default function TeamDrawPanel({
               active={roundTrip}
               onClick={() => setRoundTrip(true)}
               title="Ida y vuelta"
-              subtitle="Cada pareja se enfrenta dos veces"
+              subtitle="Cada pareja se enfrenta dos veces · final directa"
             />
             <FormatOption
               active={!roundTrip}
+              disabled={!canSingleRound}
               onClick={() => setRoundTrip(false)}
               title="Partido único"
-              subtitle="Cada pareja se enfrenta una vez"
+              subtitle="Cada pareja se enfrenta una vez · semifinales y final"
             />
           </div>
+          {!canSingleRound && (
+            <p className="mt-1.5 font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              El partido único necesita 8 jugadores (4 equipos) para jugar semifinales
+            </p>
+          )}
         </div>
       )}
 
@@ -163,21 +177,24 @@ function FormatOption({
   onClick,
   title,
   subtitle,
+  disabled = false,
 }: {
   active: boolean;
   onClick: () => void;
   title: string;
   subtitle: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={active}
-      className={`rounded-lg border px-3 py-2.5 text-left transition ${
+      className={`rounded-lg border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-45 ${
         active
           ? 'border-ember-500/50 bg-ember-500/15'
-          : 'border-coal-700 bg-coal-950/50 hover:border-coal-600'
+          : 'border-coal-700 bg-coal-950/50 enabled:hover:border-coal-600'
       }`}
     >
       <span

@@ -3,8 +3,9 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import type { EditionDetail } from './types';
+import type { EditionDetail, Side } from './types';
 import {
+  chooseSide,
   clearResult,
   createEdition,
   createPenalty,
@@ -176,6 +177,16 @@ export function useClearResult(editionId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: { matchId: number }) => clearResult(vars.matchId),
+    onSuccess: (detail) => cacheEdition(qc, detail),
+    meta: { editionId },
+  });
+}
+
+/** Picks the side of the table for a playoff match. */
+export function useChooseSide(editionId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { matchId: number; side: Side }) => chooseSide(vars.matchId, vars.side),
     onSuccess: (detail) => cacheEdition(qc, detail),
     meta: { editionId },
   });

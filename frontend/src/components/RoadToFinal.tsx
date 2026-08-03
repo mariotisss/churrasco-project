@@ -1,21 +1,45 @@
-import type { EditionDetail } from '../api/types';
-import { leagueProgress } from '../lib/tournament';
-import TeamCrest from './TeamCrest';
+// "Camino al título" drawn as an actual knockout bracket instead of a row of stages:
+// the qualified teams feed the ties, the ties feed the Finalissima and the Finalissima
+// feeds the trophy, with the connectors drawn between the rounds.
+//
+// The bracket is always complete, even before the league ends: rounds that don't exist
+// yet are previewed from the current table and marked as provisional, so you can see
+// the shape of the tournament (and who is heading where) from day one.
 
-function LockIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-      <rect x="5" y="11" width="14" height="9" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" strokeLinecap="round" />
-    </svg>
-  );
+import type { EditionDetail, MatchDto, Side, StandingRow } from '../api/types';
+import { hasSemifinals, leagueProgress, playoffSpots } from '../lib/tournament';
+import TeamCrest from './TeamCrest';
+import { SIDE_LABEL, SideSwatch, sidesForMatch } from './MatchSide';
+
+/** One team's line inside a bracket box. */
+interface Slot {
+  /** League position, when the team is known. */
+  seed: number | null;
+  name: string | null;
+  /** Goals, once the tie has been played. */
+  score: number | null;
+  /** League points, shown while the tie is still only a preview. */
+  points: number | null;
+  side: Side | null;
+  outcome: 'win' | 'loss' | null;
+  /** Shown in place of the name while the team is undecided. */
+  placeholder?: string;
 }
 
-function StageLabel({ children, tone = 'default' }: { children: React.ReactNode; tone?: 'default' | 'ember' }) {
+/** A box in the bracket: a tie (two slots) or a single qualified team. */
+interface Box {
+  key: string;
+  slots: Slot[];
+  /** Not a real match yet — previewed from the standings. */
+  provisional: boolean;
+  accent?: boolean;
+}
+
+function StageLabel({ children, accent = false }: { children: React.ReactNode; accent?: boolean }) {
   return (
     <p
       className={`mb-2.5 font-condensed text-[11px] font-bold uppercase tracking-broadcast ${
-        tone === 'ember' ? 'text-ember-400' : 'text-zinc-500'
+        accent ? 'text-ember-400' : 'text-zinc-500'
       }`}
     >
       {children}
@@ -23,174 +47,284 @@ function StageLabel({ children, tone = 'default' }: { children: React.ReactNode;
   );
 }
 
-function Chevron() {
+/** A column of the bracket: its label, then its boxes centred against the tallest column. */
+function Round({
+  label,
+  accent,
+  children,
+  className = '',
+}: {
+  label: string;
+  accent?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="mx-auto my-1 h-5 w-5 shrink-0 rotate-90 text-ember-500/60 lg:my-0 lg:rotate-0"
-    >
-      <path d="m9 6 6 6-6 6" />
-    </svg>
+    <div className={`flex min-w-0 flex-col ${className}`}>
+      <StageLabel accent={accent}>{label}</StageLabel>
+      <div className="flex flex-1 flex-col justify-center gap-5">{children}</div>
+    </div>
   );
 }
 
-function SeedCard({
-  seed,
-  name,
-  points,
-  isChampion,
-}: {
-  seed: number;
-  name: string | null;
-  points?: number;
-  isChampion?: boolean;
-}) {
+/**
+ * Bracket connector between two rounds, drawn edge to edge of the cell so it lines up
+ * with the boxes on either side. `merge` joins two boxes into one, `line` is a straight
+ * carry-over. Hidden on small screens, where the rounds stack instead.
+ */
+function Connector({ kind }: { kind: 'merge' | 'line' }) {
+  return (
+    <div className="hidden min-w-0 flex-col lg:flex">
+      {/* Keeps the drawing aligned with the boxes, below the round labels. */}
+      <p aria-hidden className="mb-2.5 font-condensed text-[11px] font-bold uppercase leading-normal opacity-0">
+        ·
+      </p>
+      <svg
+        aria-hidden
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        className="w-full flex-1 text-coal-700"
+      >
+        <path
+          d={kind === 'merge' ? 'M0 25 H55 M0 75 H55 M55 25 V75 M55 50 H100' : 'M0 50 H100'}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function SlotRow({ slot }: { slot: Slot }) {
+  const lost = slot.outcome === 'loss';
+  const won = slot.outcome === 'win';
+
+  return (
+    <div className={`flex items-stretch gap-0 ${won ? 'bg-emerald-500/[0.07]' : ''}`}>
+      {/* Side of the table, as a colored edge on the team's row. */}
+      <span
+        className="w-1 shrink-0 self-stretch"
+        title={slot.side ? SIDE_LABEL[slot.side] : undefined}
+      >
+        {slot.side && <SideSwatch side={slot.side} className="block h-full w-full" />}
+      </span>
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2">
+        <span
+          className={`w-4 shrink-0 text-center font-condensed text-xs font-bold tabular-nums ${
+            lost ? 'text-zinc-600' : 'text-zinc-500'
+          }`}
+        >
+          {slot.seed ?? '·'}
+        </span>
+        {slot.name ? (
+          <>
+            <TeamCrest name={slot.name} size="sm" />
+            <span
+              className={`min-w-0 flex-1 truncate text-[13px] ${
+                won
+                  ? 'font-bold text-white'
+                  : lost
+                    ? 'font-medium text-zinc-500'
+                    : 'font-semibold text-zinc-200'
+              }`}
+            >
+              {slot.name}
+            </span>
+          </>
+        ) : (
+          <span className="min-w-0 flex-1 truncate font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-600">
+            {slot.placeholder ?? 'Por definir'}
+          </span>
+        )}
+        {slot.score !== null ? (
+          <span
+            className={`shrink-0 font-display text-base leading-none tabular-nums ${
+              won ? 'text-white' : 'text-zinc-600'
+            }`}
+          >
+            {slot.score}
+          </span>
+        ) : (
+          slot.points !== null && (
+            <span className="shrink-0 font-condensed text-[11px] font-bold uppercase tracking-wide tabular-nums text-zinc-500">
+              {slot.points} pts
+            </span>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BracketBox({ box }: { box: Box }) {
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
-        isChampion
-          ? 'border-emerald-500/50 bg-emerald-500/10'
-          : 'border-coal-700/60 bg-coal-950/50'
+      className={`overflow-hidden rounded-lg border ${
+        box.provisional
+          ? 'border-dashed border-coal-700 bg-coal-950/40'
+          : box.accent
+            ? 'border-ember-500/40 bg-coal-950/60'
+            : 'border-coal-700/70 bg-coal-950/60'
       }`}
     >
-      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-coal-800 font-condensed text-xs font-bold text-zinc-400">
-        {seed}
-      </span>
-      {name ? (
-        <>
-          <TeamCrest name={name} size="sm" />
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-100">
-            {name}
-          </span>
-          {points !== undefined && (
-            <span className="font-condensed text-xs font-bold uppercase tracking-wide text-ember-300">
-              {points} pts
-            </span>
-          )}
-        </>
-      ) : (
-        <span className="font-condensed text-sm font-semibold uppercase tracking-wide text-zinc-600">
-          Por definir
-        </span>
-      )}
+      {box.slots.map((slot, i) => (
+        <div key={i} className={i > 0 ? 'border-t border-coal-800/80' : ''}>
+          <SlotRow slot={slot} />
+        </div>
+      ))}
     </div>
   );
 }
 
 export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
-  const s0 = detail.standings[0] ?? null;
-  const s1 = detail.standings[1] ?? null;
+  const semis = hasSemifinals(detail);
   const fin = detail.finalissima;
   const champ = detail.champion;
-
-  // The final phase (finalists + champion) only makes sense once the league is over.
+  const table = detail.standings;
   const { played, total } = leagueProgress(detail);
   const leagueDone = total > 0 && played === total;
-  const showFinalists = leagueDone || !!fin;
 
-  const homeName = showFinalists ? fin?.homeTeam.name ?? s0?.teamName ?? null : null;
-  const awayName = showFinalists ? fin?.awayTeam.name ?? s1?.teamName ?? null : null;
-  const decided = fin?.status === 'PLAYED';
+  const seedOf = (teamId: number): number | null =>
+    table.find((r) => r.teamId === teamId)?.position ?? null;
+
+  function slotFromRow(row: StandingRow | undefined): Slot {
+    return {
+      seed: row?.position ?? null,
+      name: row?.teamName ?? null,
+      score: null,
+      points: row?.points ?? null,
+      side: null,
+      outcome: null,
+    };
+  }
+
+  function boxFromMatch(match: MatchDto, accent = false): Box {
+    const sides = sidesForMatch(match);
+    const isPlayed = match.status === 'PLAYED';
+    const homeWon = isPlayed && (match.homeScore ?? 0) > (match.awayScore ?? 0);
+    return {
+      key: `m${match.id}`,
+      provisional: false,
+      accent,
+      slots: [
+        {
+          seed: seedOf(match.homeTeam.id),
+          name: match.homeTeam.name,
+          score: isPlayed ? match.homeScore : null,
+          points: null,
+          side: sides?.home ?? null,
+          outcome: isPlayed ? (homeWon ? 'win' : 'loss') : null,
+        },
+        {
+          seed: seedOf(match.awayTeam.id),
+          name: match.awayTeam.name,
+          score: isPlayed ? match.awayScore : null,
+          points: null,
+          side: sides?.away ?? null,
+          outcome: isPlayed ? (homeWon ? 'loss' : 'win') : null,
+        },
+      ],
+    };
+  }
+
+  // --- Round 1: the semifinal ties, or the two teams that go straight to the final.
+  let firstRound: Box[];
+  if (semis) {
+    firstRound =
+      detail.semifinals.length === 2
+        ? detail.semifinals.map((m) => boxFromMatch(m))
+        : [
+            { key: 'sf1', provisional: true, slots: [slotFromRow(table[0]), slotFromRow(table[3])] },
+            { key: 'sf2', provisional: true, slots: [slotFromRow(table[1]), slotFromRow(table[2])] },
+          ];
+  } else {
+    firstRound = table
+      .slice(0, playoffSpots(detail))
+      .map((row, i) => ({ key: `seed${i}`, provisional: false, slots: [slotFromRow(row)] }));
+  }
+
+  // --- The Finalissima: the real match, or a preview of who is heading there.
+  const finalBox: Box = fin
+    ? boxFromMatch(fin, true)
+    : {
+        key: 'final',
+        provisional: true,
+        slots: semis
+          ? [1, 2].map((n) => ({
+              seed: null,
+              name: null,
+              score: null,
+              points: null,
+              side: null,
+              outcome: null,
+              placeholder: `Ganador semifinal ${n}`,
+            }))
+          : [slotFromRow(table[0]), slotFromRow(table[1])],
+      };
 
   return (
     <div className="panel p-5 sm:p-6">
-      <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
-        {/* Qualifiers */}
-        <div className="min-w-0 flex-1">
-          <StageLabel>Clasificados · Liga</StageLabel>
-          <div className="space-y-2.5">
-            <SeedCard
-              seed={1}
-              name={s0?.teamName ?? null}
-              points={s0?.points}
-              isChampion={!!champ && champ.id === s0?.teamId}
-            />
-            <SeedCard
-              seed={2}
-              name={s1?.teamName ?? null}
-              points={s1?.points}
-              isChampion={!!champ && champ.id === s1?.teamId}
+      {/* Format + league progress: the context the bracket hangs from. */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-coal-800 pb-4">
+        <p className="font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+          {semis ? 'Liga a una vuelta · semifinales y final' : 'Liga ida y vuelta · final directa'}
+        </p>
+        <div className="flex items-center gap-2.5">
+          <div className="h-1 w-24 overflow-hidden rounded-full bg-coal-800">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-ember-500 to-ember-400 transition-all"
+              style={{ width: `${total ? (played / total) * 100 : 0}%` }}
             />
           </div>
+          <span className="font-condensed text-[11px] font-semibold uppercase tracking-wide tabular-nums text-zinc-500">
+            Liga {played}/{total}
+          </span>
         </div>
+      </div>
 
-        <Chevron />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_2.5rem_minmax(0,1fr)_2.5rem_minmax(0,0.9fr)] lg:items-stretch lg:gap-x-0">
+        <Round label={semis ? 'Semifinales' : 'Clasificados · Liga'} accent={semis && !!detail.semifinals.length}>
+          {firstRound.map((box) => (
+            <BracketBox key={box.key} box={box} />
+          ))}
+        </Round>
 
-        {/* Finalissima */}
-        <div className="min-w-0 flex-1">
-          <StageLabel tone={showFinalists ? 'ember' : 'default'}>Finalissima</StageLabel>
-          {showFinalists ? (
-            <div className="rounded-xl border border-ember-500/40 bg-gradient-to-b from-ember-500/10 to-coal-950/50 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex min-w-0 flex-1 items-center gap-2">
-                  <TeamCrest name={homeName ?? '—'} size="sm" />
-                  <span className="truncate text-[13px] font-semibold text-zinc-200">
-                    {homeName ?? 'Por definir'}
-                  </span>
-                </span>
-                {decided ? (
-                  <span className="scoreboard text-base">
-                    <span>{fin!.homeScore}</span>
-                    <span className="text-coal-600">:</span>
-                    <span>{fin!.awayScore}</span>
-                  </span>
-                ) : (
-                  <span className="font-display text-sm text-ember-400">VS</span>
-                )}
-                <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
-                  <span className="truncate text-[13px] font-semibold text-zinc-200">
-                    {awayName ?? 'Por definir'}
-                  </span>
-                  <TeamCrest name={awayName ?? '—'} size="sm" />
-                </span>
-              </div>
-              {!decided && (
-                <p className="mt-2 text-center font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                  Por jugar
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-coal-600 bg-coal-950/40 p-3">
-              <div className="flex items-center justify-center gap-2 py-1">
-                <LockIcon className="h-4 w-4 text-zinc-600" />
-                <span className="font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Se define al terminar la liga
-                </span>
-              </div>
-              <p className="mt-1 text-center font-condensed text-[11px] font-semibold uppercase tracking-wide tabular-nums text-zinc-600">
-                {played}/{total} partidos jugados
-              </p>
-            </div>
+        <Connector kind="merge" />
+
+        <Round label="Finalissima" accent={!!fin}>
+          <BracketBox box={finalBox} />
+          {!fin && (
+            <p className="text-center font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+              {semis
+                ? 'Se define al jugarse las semifinales'
+                : leagueDone
+                  ? 'Por jugar'
+                  : 'Se define al terminar la liga'}
+            </p>
           )}
-        </div>
+        </Round>
 
-        <Chevron />
+        <Connector kind="line" />
 
-        {/* Champion */}
-        <div className="min-w-0 flex-1">
-          <StageLabel tone={champ ? 'default' : 'default'}>Campeón</StageLabel>
+        <Round label="Campeón">
           {champ ? (
-            <div className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-emerald-500/50 bg-gradient-to-br from-emerald-500/20 to-coal-950/50 px-3 py-3 shadow-glow-sm">
-              <span className="relative text-2xl">🏆</span>
-              <span className="relative min-w-0 truncate font-display text-xl uppercase leading-none tracking-tight text-white">
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-3">
+              <span className="text-2xl">🏆</span>
+              <span className="min-w-0 truncate font-display text-xl uppercase leading-none tracking-tight text-white">
                 {champ.name}
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-3 rounded-xl border border-dashed border-coal-600 bg-coal-950/40 px-3 py-3">
+            <div className="flex items-center gap-3 rounded-lg border border-dashed border-coal-700 bg-coal-950/40 px-3 py-3">
               <span className="text-2xl opacity-40 grayscale">🏆</span>
               <span className="font-condensed text-sm font-semibold uppercase tracking-wide text-zinc-600">
                 Por decidir
               </span>
             </div>
           )}
-        </div>
+        </Round>
       </div>
     </div>
   );

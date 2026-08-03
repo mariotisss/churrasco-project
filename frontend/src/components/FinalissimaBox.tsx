@@ -1,7 +1,7 @@
 import type { MatchDto, TeamRef } from '../api/types';
 import { MatchRow } from './FixturesList';
 import TeamCrest from './TeamCrest';
-import { SIDE_LABEL, SideCard, sidesForMatch } from './MatchSide';
+import { SideCard, sidesForMatch } from './MatchSide';
 
 export default function FinalissimaBox({
   finalissima,
@@ -13,7 +13,7 @@ export default function FinalissimaBox({
   editionId: number;
 }) {
   const decided = finalissima.status === 'PLAYED';
-  const sides = sidesForMatch(finalissima.leg);
+  const sides = sidesForMatch(finalissima);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-ember-500/40 bg-gradient-to-b from-coal-850/90 to-coal-900/95 shadow-card">
@@ -34,9 +34,8 @@ export default function FinalissimaBox({
             {/* Final scoreline */}
             <div className="flex items-center justify-between gap-3 rounded-xl border border-coal-700/60 bg-coal-950/50 px-4 py-3">
               <SideCard
-                side={sides.home}
+                side={sides?.home ?? null}
                 edge="left"
-                title={SIDE_LABEL[sides.home]}
                 className="flex min-w-0 flex-1 items-center justify-end gap-2 py-1 pl-2.5 pr-2 text-right"
               >
                 <span className="truncate text-sm font-semibold text-zinc-200">
@@ -50,9 +49,8 @@ export default function FinalissimaBox({
                 <span>{finalissima.awayScore}</span>
               </span>
               <SideCard
-                side={sides.away}
+                side={sides?.away ?? null}
                 edge="right"
-                title={SIDE_LABEL[sides.away]}
                 className="flex min-w-0 flex-1 items-center gap-2 py-1 pl-2 pr-2.5"
               >
                 <TeamCrest name={finalissima.awayTeam.name} size="sm" />

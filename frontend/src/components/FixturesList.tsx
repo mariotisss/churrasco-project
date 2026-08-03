@@ -3,12 +3,14 @@ import { useClearResult, useRecordResult } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { Leg, MatchDto } from '../api/types';
 import TeamCrest from './TeamCrest';
-import { SIDE_LABEL, SideCard, sidesForMatch } from './MatchSide';
+import { SideCard, sidesForMatch } from './MatchSide';
+import SideChooser from './SideChooser';
 
 const LEG_LABELS: Record<Leg, string> = {
   IDA: 'Ida',
   VUELTA: 'Vuelta',
-  FINAL: 'Final',
+  SEMIFINAL: 'Semifinales',
+  FINAL: 'Finalissima',
 };
 
 export default function FixturesList({
@@ -18,7 +20,7 @@ export default function FixturesList({
   matches: MatchDto[];
   editionId: number;
 }) {
-  const legs: Leg[] = ['IDA', 'VUELTA'];
+  const legs: Leg[] = ['IDA', 'VUELTA', 'SEMIFINAL'];
   // Single round-robin (partido único) has only IDA matches; label it "Liga".
   const hasVuelta = matches.some((m) => m.leg === 'VUELTA');
   return (
@@ -121,16 +123,15 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
 
   const homeWon = played && (match.homeScore ?? 0) > (match.awayScore ?? 0);
   const awayWon = played && (match.awayScore ?? 0) > (match.homeScore ?? 0);
-  const sides = sidesForMatch(match.leg);
+  const sides = sidesForMatch(match);
 
   return (
     <li className="px-3 py-3 transition hover:bg-white/[0.03]">
       <div className="flex items-center gap-2">
         {/* Home team card, washed with its (per-match) side color */}
         <SideCard
-          side={sides.home}
+          side={sides?.home ?? null}
           edge="left"
-          title={SIDE_LABEL[sides.home]}
           className="flex min-w-0 flex-1 items-center justify-end gap-2.5 py-1.5 pl-2.5 pr-2 text-right"
         >
           <span
@@ -160,9 +161,8 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
 
         {/* Away team card, washed with its (per-match) side color */}
         <SideCard
-          side={sides.away}
+          side={sides?.away ?? null}
           edge="right"
-          title={SIDE_LABEL[sides.away]}
           className="flex min-w-0 flex-1 items-center gap-2.5 py-1.5 pl-2 pr-2.5"
         >
           <TeamCrest name={match.awayTeam.name} size="sm" />
@@ -204,6 +204,8 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
         </div>
       </div>
       {error && <p className="mt-1.5 text-right text-xs text-rose-400">{error}</p>}
+      {/* In the playoffs there is no return leg, so the better-classified team picks the side. */}
+      {match.playoff && <SideChooser match={match} editionId={editionId} />}
     </li>
   );
 }
