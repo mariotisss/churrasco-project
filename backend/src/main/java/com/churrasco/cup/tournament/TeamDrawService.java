@@ -68,6 +68,14 @@ public class TeamDrawService {
             throw new BadRequestException(
                     "Se necesitan al menos " + MIN_PARTICIPANTS + " jugadores (2 equipos) para sortear");
         }
+        // A una vuelta la liga es corta, así que se decide con semifinales: sin 4 equipos
+        // no hay cuadro que jugar (con impares uno se queda fuera, de ahí el redondeo).
+        int teamCount = participants.size() / 2;
+        if (!roundTrip && teamCount < PlayoffService.MIN_TEAMS_FOR_SEMIS) {
+            throw new BadRequestException("El formato a una vuelta necesita al menos "
+                    + (PlayoffService.MIN_TEAMS_FOR_SEMIS * 2) + " jugadores ("
+                    + PlayoffService.MIN_TEAMS_FOR_SEMIS + " equipos) para jugar semifinales");
+        }
 
         // Clear a previous draw (matches before teams because of the foreign keys).
         matchRepository.deleteByEditionId(editionId);

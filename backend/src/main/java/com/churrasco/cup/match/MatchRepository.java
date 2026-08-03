@@ -10,13 +10,13 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
 
     List<Match> findByStatus(MatchStatus status);
 
-    List<Match> findByEditionIdAndFinalissimaFalse(Long editionId);
+    List<Match> findByEditionIdAndPlayoffFalse(Long editionId);
 
     boolean existsByEditionIdAndStatus(Long editionId, MatchStatus status);
 
-    boolean existsByEditionIdAndFinalissimaFalseAndStatus(Long editionId, MatchStatus status);
+    boolean existsByEditionIdAndPlayoffFalseAndStatus(Long editionId, MatchStatus status);
 
-    boolean existsByEditionIdAndFinalissimaTrue(Long editionId);
+    boolean existsByEditionIdAndPlayoffTrue(Long editionId);
 
     void deleteByEditionId(Long editionId);
 }

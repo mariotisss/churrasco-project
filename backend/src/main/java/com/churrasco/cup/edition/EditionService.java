@@ -8,6 +8,7 @@ import com.churrasco.cup.edition.dto.DrawRequest;
 import com.churrasco.cup.edition.dto.EditionDetailDto;
 import com.churrasco.cup.edition.dto.EditionSummaryDto;
 import com.churrasco.cup.edition.dto.StandingRowDto;
+import com.churrasco.cup.match.Leg;
 import com.churrasco.cup.match.Match;
 import com.churrasco.cup.match.MatchRepository;
 import com.churrasco.cup.match.dto.MatchDto;
@@ -63,12 +64,16 @@ public class EditionService {
 
         List<Team> teams = teamRepository.findByEditionIdOrderByIdAsc(id);
         List<Match> matches = matchRepository.findByEditionIdOrderByOrderIndexAsc(id);
-        List<Match> leagueMatches = matches.stream().filter(m -> !m.isFinalissima()).toList();
-        Match finalissima = matches.stream().filter(Match::isFinalissima).findFirst().orElse(null);
+        List<Match> leagueMatches = matches.stream().filter(m -> !m.isPlayoff()).toList();
+        Match finalissima = matches.stream().filter(Match::isFinal).findFirst().orElse(null);
 
         List<StandingRowDto> standings = standingsCalculator.compute(teams, leagueMatches);
         List<TeamDto> teamDtos = teams.stream().map(DtoMapper::toTeamDto).toList();
         List<MatchDto> matchDtos = matches.stream().map(DtoMapper::toMatchDto).toList();
+        List<MatchDto> semifinals = matches.stream()
+                .filter(m -> m.getLeg() == Leg.SEMIFINAL)
+                .map(DtoMapper::toMatchDto)
+                .toList();
 
         return new EditionDetailDto(
                 edition.getId(),
@@ -81,6 +86,7 @@ public class EditionService {
                 teamDtos,
                 standings,
                 matchDtos,
+                semifinals,
                 DtoMapper.toMatchDto(finalissima)
         );
     }
@@ -118,7 +124,7 @@ public class EditionService {
             throw new NotFoundException("Edicion " + id + " no encontrada");
         }
         List<Team> teams = teamRepository.findByEditionIdOrderByIdAsc(id);
-        List<Match> leagueMatches = matchRepository.findByEditionIdAndFinalissimaFalse(id);
+        List<Match> leagueMatches = matchRepository.findByEditionIdAndPlayoffFalse(id);
         return standingsCalculator.compute(teams, leagueMatches);
     }
 

@@ -54,8 +54,22 @@ public class Match {
     @Column(nullable = false)
     private MatchStatus status = MatchStatus.PENDING;
 
+    /**
+     * True for playoff matches (semifinals and the Finalissima), i.e. everything that
+     * doesn't count for the league table. The column keeps its original name from when
+     * the Finalissima was the only playoff match there was.
+     */
     @Column(name = "is_finalissima", nullable = false)
-    private boolean finalissima = false;
+    private boolean playoff = false;
+
+    /**
+     * Side of the table picked by the home team, or null while nobody has picked yet.
+     * Only playoff matches have one: there the better-classified team is always the home
+     * team and gets to choose, while league sides are fixed by the leg.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "chosen_side")
+    private Side chosenSide;
 
     @Column(name = "played_at")
     private Instant playedAt;
@@ -63,13 +77,13 @@ public class Match {
     protected Match() {
     }
 
-    public Match(Edition edition, Team homeTeam, Team awayTeam, Leg leg, int orderIndex, boolean finalissima) {
+    public Match(Edition edition, Team homeTeam, Team awayTeam, Leg leg, int orderIndex, boolean playoff) {
         this.edition = edition;
         this.homeTeam = homeTeam;
         this.awayTeam = awayTeam;
         this.leg = leg;
         this.orderIndex = orderIndex;
-        this.finalissima = finalissima;
+        this.playoff = playoff;
     }
 
     /** Records the result and marks the match as played. */
@@ -92,8 +106,9 @@ public class Match {
     }
 
     /**
-     * Re-seeds this match for a new pair of teams, discarding any recorded result.
-     * Used when a league-result edit changes who qualifies for the Finalissima.
+     * Re-seeds this match for a new pair of teams, discarding any recorded result and
+     * the side that had been picked (a new home team gets to choose again). Used when a
+     * result edit changes who qualifies for a playoff match.
      */
     public void reseed(Team homeTeam, Team awayTeam) {
         this.homeTeam = homeTeam;
@@ -102,6 +117,12 @@ public class Match {
         this.awayScore = null;
         this.status = MatchStatus.PENDING;
         this.playedAt = null;
+        this.chosenSide = null;
+    }
+
+    /** Records the side the home team picks to play on. */
+    public void chooseSide(Side side) {
+        this.chosenSide = side;
     }
 
     public Long getId() {
@@ -140,8 +161,18 @@ public class Match {
         return status;
     }
 
-    public boolean isFinalissima() {
-        return finalissima;
+    /** True for semifinals and the Finalissima: playoff matches never count for the table. */
+    public boolean isPlayoff() {
+        return playoff;
+    }
+
+    /** The Finalissima itself (as opposed to a semifinal). */
+    public boolean isFinal() {
+        return playoff && leg == Leg.FINAL;
+    }
+
+    public Side getChosenSide() {
+        return chosenSide;
     }
 
     public Instant getPlayedAt() {

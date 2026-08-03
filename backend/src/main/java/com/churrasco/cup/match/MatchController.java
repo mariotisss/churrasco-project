@@ -2,6 +2,7 @@ package com.churrasco.cup.match;
 
 import com.churrasco.cup.edition.dto.EditionDetailDto;
 import com.churrasco.cup.match.dto.MatchResultRequest;
+import com.churrasco.cup.match.dto.SideChoiceRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,5 +38,15 @@ public class MatchController {
     @DeleteMapping("/{id}/result")
     public EditionDetailDto clearResult(@PathVariable Long id) {
         return service.clearResult(id);
+    }
+
+    /**
+     * Picks the side of the table for a playoff match (the better-classified team chooses).
+     * Returns the full edition detail, like the result endpoints.
+     */
+    @PutMapping("/{id}/side")
+    public EditionDetailDto chooseSide(@PathVariable Long id,
+                                       @Valid @RequestBody SideChoiceRequest request) {
+        return service.chooseSide(id, request);
     }
 }

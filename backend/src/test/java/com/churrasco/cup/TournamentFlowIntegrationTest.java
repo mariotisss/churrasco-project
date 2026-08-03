@@ -5,12 +5,16 @@ import com.churrasco.cup.edition.dto.CreateEditionRequest;
 import com.churrasco.cup.edition.dto.DrawRequest;
 import com.churrasco.cup.edition.dto.EditionDetailDto;
 import com.churrasco.cup.edition.dto.EditionSummaryDto;
+import com.churrasco.cup.edition.dto.StandingRowDto;
 import com.churrasco.cup.match.MatchService;
+import com.churrasco.cup.match.Side;
 import com.churrasco.cup.match.dto.MatchDto;
 import com.churrasco.cup.match.dto.MatchResultRequest;
+import com.churrasco.cup.match.dto.SideChoiceRequest;
 import com.churrasco.cup.player.PlayerService;
 import com.churrasco.cup.player.dto.CreatePlayerRequest;
 import com.churrasco.cup.player.dto.PlayerDto;
+import com.churrasco.cup.team.dto.TeamDto;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
@@ -28,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end integration test over real SQLite (file under target/): creates players,
@@ -83,7 +88,7 @@ class TournamentFlowIntegrationTest {
         assertEquals(2, detail.teams().size());
         assertEquals("TEAMS_DRAWN", detail.status());
 
-        List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();
+        List<MatchDto> league = detail.matches().stream().filter(m -> !m.playoff()).toList();
         assertEquals(2, league.size());
 
         // Record the whole league.
@@ -106,20 +111,164 @@ class TournamentFlowIntegrationTest {
 
     @Test
     void singleRoundDrawGeneratesOneLegAndFlagsTheEdition() {
-        List<Long> playerIds = new ArrayList<>();
-        for (String name : List.of("Leo", "Mia", "Noa", "Ona")) {
-            playerIds.add(playerService.create(new CreatePlayerRequest(name)).id());
-        }
+        List<Long> playerIds = createPlayers("Leo", "Mia", "Noa", "Ona", "Pau", "Qui", "Ras", "Sol");
 
         EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Única Cup", false));
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(playerIds, false));
 
-        // 4 players -> 2 teams, single round-robin -> 1 league match, no VUELTA.
-        assertEquals(2, detail.teams().size());
+        // 8 players -> 4 teams, single round-robin -> 6 league matches, no VUELTA.
+        assertEquals(4, detail.teams().size());
         assertEquals(false, detail.roundTrip(), "La edición debe quedar marcada como partido único");
-        List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();
-        assertEquals(1, league.size());
-        assertEquals("IDA", league.get(0).leg());
+        List<MatchDto> league = detail.matches().stream().filter(m -> !m.playoff()).toList();
+        assertEquals(6, league.size());
+        assertTrue(league.stream().allMatch(m -> m.leg().equals("IDA")));
+    }
+
+    @Test
+    void singleRoundNeedsFourTeamsForTheSemifinals() {
+        List<Long> playerIds = createPlayers("Tim", "Uma", "Val", "Wes", "Xan", "Yal");
+
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Corta Cup", false));
+        assertThrows(RuntimeException.class,
+                () -> editionService.draw(edition.id(), new DrawRequest(playerIds, false)),
+                "6 jugadores (3 equipos) no dan para semifinales");
+
+        // The same players can play the ida y vuelta format without any problem.
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(playerIds, true));
+        assertEquals(3, detail.teams().size());
+    }
+
+    /**
+     * Full single-round flow: the league feeds 1v4 and 2v3, the semifinal winners meet in
+     * the Finalissima, and the better-classified side is always the one at home (the one
+     * that picks the side of the table).
+     */
+    @Test
+    void singleRoundLeagueIsFollowedBySemifinalsAndFinal() {
+        List<Long> ids = createPlayers("S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Semis Cup", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, false));
+        assertEquals(4, detail.teams().size());
+
+        EditionDetailDto afterLeague = recordSingleRoundLeague(edition.id(), detail.teams());
+        assertEquals(2, afterLeague.semifinals().size(), "La liga a una vuelta acaba en semifinales");
+        assertNull(afterLeague.finalissima(), "La final no existe hasta que se juegan las semis");
+
+        List<StandingRowDto> table = afterLeague.standings();
+        MatchDto semi1 = afterLeague.semifinals().get(0);
+        MatchDto semi2 = afterLeague.semifinals().get(1);
+        assertEquals(table.get(0).teamId(), semi1.homeTeam().id(), "1º en casa contra el 4º");
+        assertEquals(table.get(3).teamId(), semi1.awayTeam().id());
+        assertEquals(table.get(1).teamId(), semi2.homeTeam().id(), "2º en casa contra el 3º");
+        assertEquals(table.get(2).teamId(), semi2.awayTeam().id());
+
+        // The 1st picks its side; the 4th gets the other one.
+        EditionDetailDto withSide =
+                matchService.chooseSide(semi1.id(), new SideChoiceRequest(Side.AZUL));
+        assertEquals("AZUL", withSide.semifinals().get(0).chosenSide());
+
+        // 1st and 3rd win their semis -> the 1st is the better classified finalist.
+        matchService.recordResult(semi1.id(), new MatchResultRequest(5, 2));
+        EditionDetailDto afterSemis = matchService.recordResult(semi2.id(), new MatchResultRequest(1, 4));
+
+        MatchDto finalissima = afterSemis.finalissima();
+        assertNotNull(finalissima, "Las dos semis jugadas deben generar la final");
+        assertEquals(table.get(0).teamId(), finalissima.homeTeam().id(),
+                "El mejor clasificado de los dos finalistas juega en casa y elige lado");
+        assertEquals(table.get(2).teamId(), finalissima.awayTeam().id());
+        assertNull(finalissima.chosenSide(), "La final empieza sin lado elegido");
+
+        EditionDetailDto finished =
+                matchService.recordResult(finalissima.id(), new MatchResultRequest(7, 3));
+        assertEquals("FINISHED", finished.status());
+        assertEquals(table.get(0).teamId(), finished.champion().id());
+    }
+
+    @Test
+    void clearingASemifinalResultRemovesTheFinal() {
+        List<Long> ids = createPlayers("K1", "K2", "K3", "K4", "K5", "K6", "K7", "K8");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Semis Clear", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, false));
+
+        EditionDetailDto afterLeague = recordSingleRoundLeague(edition.id(), detail.teams());
+        List<MatchDto> semis = afterLeague.semifinals();
+        matchService.recordResult(semis.get(0).id(), new MatchResultRequest(5, 2));
+        EditionDetailDto afterSemis =
+                matchService.recordResult(semis.get(1).id(), new MatchResultRequest(5, 2));
+        assertNotNull(afterSemis.finalissima());
+
+        EditionDetailDto cleared = matchService.clearResult(semis.get(1).id());
+        assertNull(cleared.finalissima(), "Sin las dos semis jugadas no se conocen los finalistas");
+        assertEquals(2, cleared.semifinals().size(), "Las semifinales siguen en pie");
+    }
+
+    @Test
+    void clearingALeagueResultRemovesTheWholePlayoffPhase() {
+        List<Long> ids = createPlayers("L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Liga Clear", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, false));
+
+        EditionDetailDto afterLeague = recordSingleRoundLeague(edition.id(), detail.teams());
+        assertEquals(2, afterLeague.semifinals().size());
+
+        MatchDto anyLeagueMatch = afterLeague.matches().stream()
+                .filter(m -> !m.playoff()).findFirst().orElseThrow();
+        EditionDetailDto cleared = matchService.clearResult(anyLeagueMatch.id());
+        assertEquals(0, cleared.semifinals().size(), "Una liga incompleta no tiene semifinales");
+        assertNull(cleared.finalissima());
+    }
+
+    @Test
+    void sideCanOnlyBeChosenInThePlayoffs() {
+        List<Long> ids = createPlayers("N1", "N2", "N3", "N4");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Lado Cup", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, true));
+
+        Long leagueMatchId = detail.matches().stream()
+                .filter(m -> !m.playoff()).findFirst().orElseThrow().id();
+        assertThrows(RuntimeException.class,
+                () -> matchService.chooseSide(leagueMatchId, new SideChoiceRequest(Side.AZUL)),
+                "En la liga el lado lo fija la ida o la vuelta");
+    }
+
+    @Test
+    void roundTripFinalIsPlayedAtHomeByTheLeagueWinnerWhoPicksTheSide() {
+        List<Long> ids = createPlayers("V1", "V2", "V3", "V4", "V5", "V6");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Vuelta Cup", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, true));
+
+        long a = detail.teams().get(0).id();
+        long b = detail.teams().get(1).id();
+        EditionDetailDto afterLeague = recordLeague(edition.id(), a, b);
+
+        MatchDto finalissima = afterLeague.finalissima();
+        assertEquals(afterLeague.standings().get(0).teamId(), finalissima.homeTeam().id(),
+                "El primero de la liga elige lado, así que juega como local");
+        assertNull(finalissima.chosenSide());
+
+        EditionDetailDto picked =
+                matchService.chooseSide(finalissima.id(), new SideChoiceRequest(Side.ROJIBLANCO));
+        assertEquals("ROJIBLANCO", picked.finalissima().chosenSide());
+    }
+
+    /**
+     * Records every league match of a single-round edition so the table ends up ordered
+     * exactly like {@code teams}: the first team beats everyone, the second beats everyone
+     * below it, and so on. Winner scores 5–1.
+     */
+    private EditionDetailDto recordSingleRoundLeague(Long editionId, List<TeamDto> teams) {
+        List<Long> byStrength = teams.stream().map(TeamDto::id).toList();
+        EditionDetailDto detail = editionService.getDetail(editionId);
+        EditionDetailDto last = detail;
+        for (MatchDto m : detail.matches()) {
+            if (m.playoff()) {
+                continue;
+            }
+            boolean homeWins = byStrength.indexOf(m.homeTeam().id()) < byStrength.indexOf(m.awayTeam().id());
+            last = matchService.recordResult(m.id(),
+                    new MatchResultRequest(homeWins ? 5 : 1, homeWins ? 1 : 5));
+        }
+        return last;
     }
 
     @Test
@@ -131,7 +280,7 @@ class TournamentFlowIntegrationTest {
         }
         EditionSummaryDto first = editionService.create(new CreateEditionRequest("Primera", false));
         EditionDetailDto firstDetail = editionService.draw(first.id(), new DrawRequest(veteranIds));
-        List<MatchDto> league = firstDetail.matches().stream().filter(m -> !m.finalissima()).toList();
+        List<MatchDto> league = firstDetail.matches().stream().filter(m -> !m.playoff()).toList();
         matchService.recordResult(league.get(0).id(), new MatchResultRequest(10, 5));
         EditionDetailDto afterLeague =
                 matchService.recordResult(league.get(1).id(), new MatchResultRequest(3, 8));
@@ -233,7 +382,7 @@ class TournamentFlowIntegrationTest {
         EditionDetailDto detail = editionService.getDetail(editionId);
         EditionDetailDto last = detail;
         for (MatchDto m : detail.matches()) {
-            if (m.finalissima()) {
+            if (m.playoff()) {
                 continue;
             }
             long home = m.homeTeam().id();
@@ -267,7 +416,7 @@ class TournamentFlowIntegrationTest {
         EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Empate Cup", false));
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(playerIds));
 
-        List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();
+        List<MatchDto> league = detail.matches().stream().filter(m -> !m.playoff()).toList();
         matchService.recordResult(league.get(0).id(), new MatchResultRequest(5, 1));
         EditionDetailDto afterLeague = matchService.recordResult(league.get(1).id(), new MatchResultRequest(2, 4));
 
@@ -283,7 +432,7 @@ class TournamentFlowIntegrationTest {
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids));
 
         Long leagueMatchId = detail.matches().stream()
-                .filter(m -> !m.finalissima()).findFirst().orElseThrow().id();
+                .filter(m -> !m.playoff()).findFirst().orElseThrow().id();
         assertThrows(RuntimeException.class,
                 () -> matchService.recordResult(leagueMatchId, new MatchResultRequest(4, 4)),
                 "Ningún partido de liga puede terminar en empate");
@@ -295,7 +444,7 @@ class TournamentFlowIntegrationTest {
         EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Clear Cup", false));
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids));
 
-        List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();
+        List<MatchDto> league = detail.matches().stream().filter(m -> !m.playoff()).toList();
         assertEquals(2, league.size());
         matchService.recordResult(league.get(0).id(), new MatchResultRequest(5, 2));
         EditionDetailDto afterLeague =
@@ -319,7 +468,7 @@ class TournamentFlowIntegrationTest {
         EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Clear Champ", false));
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids));
 
-        List<MatchDto> league = detail.matches().stream().filter(m -> !m.finalissima()).toList();
+        List<MatchDto> league = detail.matches().stream().filter(m -> !m.playoff()).toList();
         matchService.recordResult(league.get(0).id(), new MatchResultRequest(5, 2));
         EditionDetailDto afterLeague =
                 matchService.recordResult(league.get(1).id(), new MatchResultRequest(1, 4));

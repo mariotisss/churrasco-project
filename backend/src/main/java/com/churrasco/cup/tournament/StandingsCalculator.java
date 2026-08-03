@@ -30,7 +30,7 @@ public class StandingsCalculator {
 
     /**
      * @param teams         all teams in the edition (they appear even if they haven't played)
-     * @param leagueMatches league matches (excluding the Finalissima); only PLAYED ones count
+     * @param leagueMatches league matches (excluding the playoffs); only PLAYED ones count
      */
     public List<StandingRowDto> compute(List<Team> teams, List<Match> leagueMatches) {
         Map<Long, Acc> table = new LinkedHashMap<>();
@@ -39,7 +39,7 @@ public class StandingsCalculator {
         }
 
         for (Match m : leagueMatches) {
-            if (m.getStatus() != MatchStatus.PLAYED || m.isFinalissima()) {
+            if (m.getStatus() != MatchStatus.PLAYED || m.isPlayoff()) {
                 continue;
             }
             Acc home = table.get(m.getHomeTeam().getId());

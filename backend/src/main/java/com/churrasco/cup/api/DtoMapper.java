@@ -66,7 +66,8 @@ public final class DtoMapper {
                 m.getHomeScore(),
                 m.getAwayScore(),
                 m.getStatus().name(),
-                m.isFinalissima(),
+                m.isPlayoff(),
+                m.getChosenSide() != null ? m.getChosenSide().name() : null,
                 m.getPlayedAt()
         );
     }

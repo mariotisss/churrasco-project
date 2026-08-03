@@ -160,7 +160,7 @@ public class PlayerService {
     /** The Finalissima opponent that is not the champion, or null when there is no final. */
     private Team findRunnerUp(Long editionId, Long championTeamId) {
         Match finalissima = matchRepository.findByEditionIdOrderByOrderIndexAsc(editionId).stream()
-                .filter(Match::isFinalissima)
+                .filter(Match::isFinal)
                 .findFirst()
                 .orElse(null);
         if (finalissima == null) {

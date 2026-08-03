@@ -40,12 +40,17 @@ CREATE TABLE IF NOT EXISTS game (
     edition_id     INTEGER NOT NULL REFERENCES edition(id) ON DELETE CASCADE,
     home_team_id   INTEGER NOT NULL REFERENCES team(id) ON DELETE CASCADE,
     away_team_id   INTEGER NOT NULL REFERENCES team(id) ON DELETE CASCADE,
-    leg            TEXT    NOT NULL,           -- IDA | VUELTA | FINAL
+    leg            TEXT    NOT NULL,           -- IDA | VUELTA | SEMIFINAL | FINAL
     order_index    INTEGER NOT NULL,
     home_score     INTEGER,
     away_score     INTEGER,
     status         TEXT    NOT NULL DEFAULT 'PENDING',  -- PENDING | PLAYED
+    -- 1 = playoff match (semifinal or Finalissima): never counts for the league table.
+    -- Historical name: the Finalissima used to be the only playoff match.
     is_finalissima INTEGER NOT NULL DEFAULT 0,
+    -- Side of the table picked by the home team of a playoff match: ROJIBLANCO | AZUL.
+    -- Existing databases get this column via SchemaMigrations (ALTER TABLE).
+    chosen_side    TEXT,
     played_at      INTEGER  -- epoch in milliseconds
 );
 
