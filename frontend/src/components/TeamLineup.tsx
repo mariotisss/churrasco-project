@@ -3,7 +3,7 @@ import TeamCrest from './TeamCrest';
 type IconProps = { className?: string };
 
 /** Stacked chevrons pointing up — the attacking (front) rod. */
-function AttackIcon({ className }: IconProps) {
+export function AttackIcon({ className }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -21,7 +21,7 @@ function AttackIcon({ className }: IconProps) {
 }
 
 /** A shield — the defending (back) rod. */
-function ShieldIcon({ className }: IconProps) {
+export function ShieldIcon({ className }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
