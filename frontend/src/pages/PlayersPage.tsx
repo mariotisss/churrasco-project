@@ -9,9 +9,9 @@ import {
 } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { Player } from '../api/types';
-import { toSquareJpeg } from '../lib/image';
 import PlayerAvatar from '../components/PlayerAvatar';
 import ConfirmDialog from '../components/ConfirmDialog';
+import PhotoCropDialog from '../components/PhotoCropDialog';
 
 /** Camera glyph for the "set a picture" affordance on each avatar. */
 function CameraIcon({ className }: { className?: string }) {
@@ -118,21 +118,27 @@ function PlayerCard({ player }: { player: Player }) {
   const [confirming, setConfirming] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [cropping, setCropping] = useState<File | null>(null);
 
-  async function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = ''; // so picking the same file again still fires a change
     if (!file) return;
     setPhotoError(null);
-    try {
-      const image = await toSquareJpeg(file);
-      uploadPhoto.mutate(
-        { id: player.id, image },
-        { onError: (err) => setPhotoError(apiErrorMessage(err, 'No se ha podido subir la foto')) },
-      );
-    } catch {
-      setPhotoError('No se ha podido leer esa imagen');
-    }
+    setCropping(file); // framed by hand before it goes anywhere
+  }
+
+  function savePhoto(image: Blob) {
+    uploadPhoto.mutate(
+      { id: player.id, image },
+      {
+        onSuccess: () => setCropping(null),
+        onError: (err) => {
+          setCropping(null);
+          setPhotoError(apiErrorMessage(err, 'No se ha podido subir la foto'));
+        },
+      },
+    );
   }
 
   function saveName() {
@@ -226,6 +232,15 @@ function PlayerCard({ player }: { player: Player }) {
           Eliminar
         </button>
       </div>
+
+      {cropping && (
+        <PhotoCropDialog
+          file={cropping}
+          busy={uploadPhoto.isPending}
+          onConfirm={savePhoto}
+          onClose={() => setCropping(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={confirming}
