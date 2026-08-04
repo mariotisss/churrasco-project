@@ -16,7 +16,8 @@ import java.util.Map;
  * Computes the league standings from the matches played.
  * Not persisted: always derived, so editing a result recalculates correctly.
  *
- * Points: win 3, draw 1, loss 0.
+ * Points: win 3, loss 0. Futbolin has no draws -- every match has a winner, and
+ * MatchService rejects a level score -- so there is no draw case to score.
  * Tie-break: points -> goal difference -> goals for -> team name.
  */
 @Component
@@ -65,7 +66,6 @@ public class StandingsCalculator {
                     a.team.getName(),
                     a.played,
                     a.won,
-                    a.drawn,
                     a.lost,
                     a.goalsFor,
                     a.goalsAgainst,
@@ -81,7 +81,6 @@ public class StandingsCalculator {
         private final Team team;
         private int played;
         private int won;
-        private int drawn;
         private int lost;
         private int goalsFor;
         private int goalsAgainst;
@@ -98,9 +97,6 @@ public class StandingsCalculator {
             if (scored > conceded) {
                 won++;
                 points += 3;
-            } else if (scored == conceded) {
-                drawn++;
-                points += 1;
             } else {
                 lost++;
             }

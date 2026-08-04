@@ -4,7 +4,6 @@ import TeamCrest from './TeamCrest';
 
 const FORM_STYLE: Record<FormResult, string> = {
   W: 'bg-emerald-500/90 text-emerald-50',
-  D: 'bg-zinc-600 text-zinc-100',
   L: 'bg-rose-500/90 text-rose-50',
 };
 
@@ -18,7 +17,7 @@ function FormGuide({ results }: { results: FormResult[] }) {
         <span
           key={i}
           className={`grid h-5 w-5 place-items-center rounded font-condensed text-[10px] font-bold ${FORM_STYLE[r]}`}
-          title={r === 'W' ? 'Victoria' : r === 'D' ? 'Empate' : 'Derrota'}
+          title={r === 'W' ? 'Victoria' : 'Derrota'}
         >
           {r}
         </span>
@@ -54,7 +53,6 @@ export default function StandingsTable({
               {form && <th className="hidden px-2 py-3 text-center md:table-cell">Forma</th>}
               <th className="w-10 px-1 py-3 text-center" title="Partidos jugados">PJ</th>
               <th className="w-10 px-1 py-3 text-center" title="Ganados">V</th>
-              <th className="w-10 px-1 py-3 text-center" title="Empatados">E</th>
               <th className="w-10 px-1 py-3 text-center" title="Perdidos">D</th>
               <th className="w-12 px-1 py-3 text-center" title="Diferencia de goles">DG</th>
               <th className="w-14 px-3 py-3 text-center text-ember-300">Pts</th>
@@ -101,7 +99,6 @@ export default function StandingsTable({
                   <td className="px-1 py-3 text-center font-semibold tabular-nums text-emerald-400">
                     {row.won}
                   </td>
-                  <td className="px-1 py-3 text-center tabular-nums text-zinc-400">{row.drawn}</td>
                   <td className="px-1 py-3 text-center font-semibold tabular-nums text-rose-400">
                     {row.lost}
                   </td>

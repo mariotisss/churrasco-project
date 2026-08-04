@@ -61,7 +61,7 @@ export default function FeaturedEdition({ editionId }: { editionId: number }) {
                       {leader.teamName}
                     </p>
                     <p className="font-condensed text-xs font-semibold uppercase tracking-wide text-ember-300">
-                      {leader.points} pts · {leader.won}V {leader.drawn}E {leader.lost}D
+                      {leader.points} pts · {leader.won}V {leader.lost}D
                     </p>
                   </div>
                 </div>

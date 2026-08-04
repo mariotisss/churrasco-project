@@ -52,9 +52,10 @@ export function nextPendingMatch(matches: MatchDto[]): MatchDto | null {
   return pending[0] ?? null;
 }
 
-export type FormResult = 'W' | 'D' | 'L';
+/** Futbolín has no draws: a match is a win or a loss, never anything in between. */
+export type FormResult = 'W' | 'L';
 
-/** Recent W/D/L results for a team, oldest → newest, capped at `limit`. */
+/** Recent results for a team, oldest → newest, capped at `limit`. */
 export function formForTeam(teamId: number, matches: MatchDto[], limit = 5): FormResult[] {
   return leagueMatches(matches)
     .filter(
@@ -66,9 +67,7 @@ export function formForTeam(teamId: number, matches: MatchDto[], limit = 5): For
       const isHome = m.homeTeam.id === teamId;
       const gf = (isHome ? m.homeScore : m.awayScore) ?? 0;
       const ga = (isHome ? m.awayScore : m.homeScore) ?? 0;
-      if (gf > ga) return 'W' as const;
-      if (gf < ga) return 'L' as const;
-      return 'D' as const;
+      return gf > ga ? ('W' as const) : ('L' as const);
     })
     .slice(-limit);
 }
@@ -116,10 +115,15 @@ export function palmares(editions: EditionSummary[]): EditionSummary[] {
 // ---- Qualification odds ----------------------------------------------------
 // The league qualifies its top teams for the playoffs (top 4 to the semifinals, or
 // top 2 straight to the Finalissima) — or, when everyone is already in, it is the top
-// seed that's at stake. We estimate each team's chance of landing in those places with
-// a Monte Carlo simulation: from the results already played, we replay the pending
-// fixtures many times (each a coin-flip win — no draws) and count how often each team
-// ends up inside them.
+// seed that's at stake. Nothing can end in a draw (the backend rejects it), so every
+// pending fixture has exactly two outcomes and the rest of the league is a finite set
+// of 2^pending combinations. When that set is small enough we walk *all* of it and the
+// odds are exact; only for the biggest leagues do we fall back to sampling.
+//
+// A combination fixes who wins each match, not the scorelines, so teams that end level
+// on points are genuinely unresolved: the goal-difference tie-break depends on goals
+// nobody has scored yet. Those combinations split the contested places evenly among the
+// tied teams instead of pretending we know the answer.
 
 export interface TeamOdds {
   teamId: number;
@@ -128,24 +132,24 @@ export interface TeamOdds {
   probability: number;
 }
 
-const SIMULATIONS = 5000;
-
-interface OddsAcc {
-  points: number;
-  goalsFor: number;
-  goalsAgainst: number;
-  name: string;
+/** The odds plus how they were obtained, so the UI can say what it is showing. */
+export interface OddsReport {
+  teams: TeamOdds[];
+  /** League fixtures still to play. */
+  pendingMatches: number;
+  /** Exactly how many ways the rest of the league can play out: 2^pendingMatches. */
+  combinations: bigint;
+  /** True when every combination was counted; false when they were sampled. */
+  exact: boolean;
+  /** Combinations actually evaluated (equal to `combinations` when exact). */
+  evaluated: number;
 }
 
-/** Same tie-break as the backend: points → goal difference → goals for → name. */
-function compareAcc(a: OddsAcc, b: OddsAcc): number {
-  if (b.points !== a.points) return b.points - a.points;
-  const gdA = a.goalsFor - a.goalsAgainst;
-  const gdB = b.goalsFor - b.goalsAgainst;
-  if (gdB !== gdA) return gdB - gdA;
-  if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-  return a.name.localeCompare(b.name);
-}
+/** Above this many combinations we sample instead of enumerating (2^20 ≈ 1M). */
+const EXACT_LIMIT = 20;
+
+/** Combinations drawn at random when the full set is too large to walk. */
+const SAMPLES = 20000;
 
 /** Small seeded PRNG (mulberry32) so the odds stay stable between re-renders. */
 function mulberry32(seed: number): () => number {
@@ -159,100 +163,159 @@ function mulberry32(seed: number): () => number {
 }
 
 /**
- * Estimated probability that each team ends up in the places at stake (see
- * {@link oddsSpots}), given the results so far and the fixtures still to play.
- * Returned sorted by probability (highest first). Empty once the league is over,
- * when there is nothing left to estimate.
+ * Hands out the places at stake for one combination. Teams clear of the cut-off take a
+ * whole place; teams level on points at the cut-off share what is left between them,
+ * because a combination says who wins, not by how much.
  */
-export function qualificationOdds(detail: EditionDetail): TeamOdds[] {
+function creditScenario(
+  points: Int32Array,
+  top: Int32Array,
+  spots: number,
+  credit: Float64Array,
+): void {
+  // `top` keeps the highest `spots` point totals, ascending, so top[0] ends up being
+  // the tally of the last qualifying place. Cheaper than sorting the whole table, and
+  // this runs once per combination.
+  top.fill(-1);
+  for (let i = 0; i < points.length; i++) {
+    const v = points[i];
+    if (v <= top[0]) continue;
+    let j = 0;
+    while (j + 1 < spots && top[j + 1] < v) {
+      top[j] = top[j + 1];
+      j++;
+    }
+    top[j] = v;
+  }
+  const cutoff = top[0];
+
+  let above = 0;
+  let tied = 0;
+  for (let i = 0; i < points.length; i++) {
+    if (points[i] > cutoff) above++;
+    else if (points[i] === cutoff) tied++;
+  }
+  const share = (spots - above) / tied;
+
+  for (let i = 0; i < points.length; i++) {
+    if (points[i] > cutoff) credit[i] += 1;
+    else if (points[i] === cutoff) credit[i] += share;
+  }
+}
+
+/**
+ * Probability that each team ends up in the places at stake (see {@link oddsSpots}),
+ * given the results so far and the fixtures still to play — exact whenever the number
+ * of possible combinations is small enough to enumerate. Teams come back sorted by
+ * probability (highest first); `teams` is empty once the league is over, when there is
+ * nothing left to work out.
+ */
+export function qualificationOdds(detail: EditionDetail): OddsReport {
   const teams = detail.teams;
   const spots = oddsSpots(detail);
-  if (teams.length < 2) return [];
-
   const league = leagueMatches(detail.matches);
   const pending = league.filter((m) => m.status === 'PENDING');
-  if (pending.length === 0) return []; // everything is already settled
+  const empty: OddsReport = {
+    teams: [],
+    pendingMatches: pending.length,
+    combinations: 1n << BigInt(pending.length),
+    exact: true,
+    evaluated: 0,
+  };
+  if (teams.length < 2 || pending.length === 0) return empty;
+
+  const index = new Map<number, number>();
+  teams.forEach((t, i) => index.set(t.id, i));
 
   // Base table from matches already played.
-  const base = new Map<number, OddsAcc>();
-  for (const t of teams) {
-    base.set(t.id, { points: 0, goalsFor: 0, goalsAgainst: 0, name: t.name });
-  }
+  const basePoints = new Int32Array(teams.length);
   for (const m of league) {
     if (m.status !== 'PLAYED') continue;
-    const h = base.get(m.homeTeam.id);
-    const a = base.get(m.awayTeam.id);
-    if (!h || !a) continue;
+    const h = index.get(m.homeTeam.id);
+    const a = index.get(m.awayTeam.id);
+    if (h === undefined || a === undefined) continue;
     const hs = m.homeScore ?? 0;
     const as = m.awayScore ?? 0;
-    h.goalsFor += hs;
-    h.goalsAgainst += as;
-    a.goalsFor += as;
-    a.goalsAgainst += hs;
-    if (hs > as) h.points += 3;
-    else if (as > hs) a.points += 3;
-    else {
-      h.points += 1;
-      a.points += 1;
-    }
+    basePoints[hs > as ? h : a] += 3;
   }
 
-  // Seed from the current state so identical data always yields identical odds.
-  let seed = 0x811c9dc5;
-  const mix = (n: number) => {
-    seed ^= n | 0;
-    seed = Math.imul(seed, 0x01000193);
-  };
-  for (const t of teams) {
-    const a = base.get(t.id)!;
-    mix(t.id);
-    mix(a.points);
-    mix(a.goalsFor);
-    mix(a.goalsAgainst);
+  // Pending fixtures as index pairs; anything pointing outside this edition is ignored.
+  const home: number[] = [];
+  const away: number[] = [];
+  for (const m of pending) {
+    const h = index.get(m.homeTeam.id);
+    const a = index.get(m.awayTeam.id);
+    if (h === undefined || a === undefined) continue;
+    home.push(h);
+    away.push(a);
   }
-  for (const m of pending) mix(m.id);
-  const rand = mulberry32(seed);
+  const n = home.length;
+  if (n === 0) return empty;
 
-  const qualified = new Map<number, number>();
-  for (const t of teams) qualified.set(t.id, 0);
+  const combinations = 1n << BigInt(n);
+  const exact = n <= EXACT_LIMIT;
+  const credit = new Float64Array(teams.length);
+  const points = new Int32Array(teams.length);
+  const top = new Int32Array(spots);
+  let evaluated: number;
 
-  for (let s = 0; s < SIMULATIONS; s++) {
-    const acc = new Map<number, OddsAcc>();
-    for (const [id, v] of base) acc.set(id, { ...v });
+  if (exact) {
+    evaluated = 2 ** n;
+    // Gray-code walk: consecutive combinations differ in a single match, so flipping
+    // one result (6 points changing hands) is all it takes to move to the next one.
+    const awayWins = new Uint8Array(n);
+    points.set(basePoints);
+    for (let i = 0; i < n; i++) points[home[i]] += 3;
+    creditScenario(points, top, spots, credit);
 
-    for (const m of pending) {
-      const h = acc.get(m.homeTeam.id)!;
-      const a = acc.get(m.awayTeam.id)!;
-      const homeWins = rand() < 0.5;
-      // A plausible winning scoreline just to break goal-difference ties.
-      const loserGoals = Math.floor(rand() * 5); // 0..4
-      const winnerGoals = loserGoals + 1 + Math.floor(rand() * 5); // +1..+5
-      if (homeWins) {
-        h.goalsFor += winnerGoals;
-        h.goalsAgainst += loserGoals;
-        a.goalsFor += loserGoals;
-        a.goalsAgainst += winnerGoals;
-        h.points += 3;
+    for (let i = 1; i < evaluated; i++) {
+      const bit = 31 - Math.clz32(i & -i); // the match that flips
+      const h = home[bit];
+      const a = away[bit];
+      if (awayWins[bit]) {
+        points[a] -= 3;
+        points[h] += 3;
+        awayWins[bit] = 0;
       } else {
-        a.goalsFor += winnerGoals;
-        a.goalsAgainst += loserGoals;
-        h.goalsFor += loserGoals;
-        h.goalsAgainst += winnerGoals;
-        a.points += 3;
+        points[h] -= 3;
+        points[a] += 3;
+        awayWins[bit] = 1;
       }
+      creditScenario(points, top, spots, credit);
     }
+  } else {
+    evaluated = SAMPLES;
+    // Seed from the current state so identical data always yields identical odds.
+    let seed = 0x811c9dc5;
+    const mix = (v: number) => {
+      seed ^= v | 0;
+      seed = Math.imul(seed, 0x01000193);
+    };
+    teams.forEach((t, i) => {
+      mix(t.id);
+      mix(basePoints[i]);
+    });
+    for (const m of pending) mix(m.id);
+    const rand = mulberry32(seed);
 
-    const ranked = [...acc.entries()].sort((x, y) => compareAcc(x[1], y[1]));
-    for (const [teamId] of ranked.slice(0, spots)) {
-      qualified.set(teamId, (qualified.get(teamId) ?? 0) + 1);
+    for (let s = 0; s < SAMPLES; s++) {
+      points.set(basePoints);
+      for (let i = 0; i < n; i++) points[rand() < 0.5 ? home[i] : away[i]] += 3;
+      creditScenario(points, top, spots, credit);
     }
   }
 
-  return teams
-    .map((t) => ({
-      teamId: t.id,
-      teamName: t.name,
-      probability: (qualified.get(t.id) ?? 0) / SIMULATIONS,
-    }))
-    .sort((a, b) => b.probability - a.probability || a.teamName.localeCompare(b.teamName));
+  return {
+    teams: teams
+      .map((t, i) => ({
+        teamId: t.id,
+        teamName: t.name,
+        probability: credit[i] / evaluated,
+      }))
+      .sort((a, b) => b.probability - a.probability || a.teamName.localeCompare(b.teamName)),
+    pendingMatches: n,
+    combinations,
+    exact,
+    evaluated,
+  };
 }

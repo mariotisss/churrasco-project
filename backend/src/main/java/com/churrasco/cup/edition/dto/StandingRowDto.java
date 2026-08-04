@@ -7,7 +7,6 @@ public record StandingRowDto(
         String teamName,
         int played,
         int won,
-        int drawn,
         int lost,
         int goalsFor,
         int goalsAgainst,
