@@ -109,7 +109,7 @@ public class TeamDrawService {
                 p1 = p2;
                 p2 = tmp;
             }
-            teams.add(new Team(edition, p1.getName() + " & " + p2.getName(), p1, p2));
+            teams.add(new Team(edition, p1, p2));
         }
         teams = teamRepository.saveAll(teams);
 

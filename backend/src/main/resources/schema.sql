@@ -27,10 +27,11 @@ CREATE TABLE IF NOT EXISTS edition (
     created_at        INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER) * 1000)
 );
 
+-- No name column: a team is named after its two players, derived on read so that
+-- renaming a player updates every edition they ever played.
 CREATE TABLE IF NOT EXISTS team (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     edition_id INTEGER NOT NULL REFERENCES edition(id) ON DELETE CASCADE,
-    name       TEXT    NOT NULL,
     player1_id INTEGER NOT NULL REFERENCES player(id),
     player2_id INTEGER NOT NULL REFERENCES player(id)
 );

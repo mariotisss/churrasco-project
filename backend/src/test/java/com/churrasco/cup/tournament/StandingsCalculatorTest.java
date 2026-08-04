@@ -18,8 +18,9 @@ class StandingsCalculatorTest {
     private final StandingsCalculator calculator = new StandingsCalculator();
     private final Edition edition = new Edition("test");
 
+    /** A team whose derived name is "<name>1 &amp; <name>2", so it sorts under `name`. */
     private Team team(long id, String name) {
-        Team team = new Team(edition, name, new Player(name + "-1"), new Player(name + "-2"));
+        Team team = new Team(edition, new Player(name + "1"), new Player(name + "2"));
         ReflectionTestUtils.setField(team, "id", id);
         return team;
     }
@@ -45,17 +46,17 @@ class StandingsCalculatorTest {
         List<StandingRowDto> table = calculator.compute(List.of(a, b, c), matches);
 
         // A: 6 pts (gd +4). B: 3 pts (gd 0). C: 0 pts (gd -4).
-        assertEquals("A", table.get(0).teamName());
+        assertEquals("A1 & A2", table.get(0).teamName());
         assertEquals(6, table.get(0).points());
         assertEquals(2, table.get(0).won());
         assertEquals(0, table.get(0).lost());
         assertEquals(4, table.get(0).goalDifference());
         assertEquals(1, table.get(0).position());
 
-        assertEquals("B", table.get(1).teamName());
+        assertEquals("B1 & B2", table.get(1).teamName());
         assertEquals(3, table.get(1).points());
 
-        assertEquals("C", table.get(2).teamName());
+        assertEquals("C1 & C2", table.get(2).teamName());
         assertEquals(0, table.get(2).points());
         assertEquals(2, table.get(2).lost());
         assertEquals(3, table.get(2).position());
@@ -75,9 +76,9 @@ class StandingsCalculatorTest {
         List<StandingRowDto> table = calculator.compute(List.of(x, y, z), matches);
 
         // X and Y tie on 3 points; X ahead on goal difference.
-        assertEquals("X", table.get(0).teamName());
-        assertEquals("Y", table.get(1).teamName());
-        assertEquals("Z", table.get(2).teamName());
+        assertEquals("X1 & X2", table.get(0).teamName());
+        assertEquals("Y1 & Y2", table.get(1).teamName());
+        assertEquals("Z1 & Z2", table.get(2).teamName());
         assertEquals(0, table.get(2).points());
     }
 

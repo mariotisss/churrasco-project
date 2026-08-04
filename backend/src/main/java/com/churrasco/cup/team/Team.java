@@ -12,6 +12,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+/**
+ * A pair of players for one edition. The team name is <b>derived</b> from its two
+ * players, never stored: renaming a player has to show up everywhere the team appears,
+ * including editions played long ago.
+ */
 @Entity
 @Table(name = "team")
 public class Team {
@@ -24,9 +29,6 @@ public class Team {
     @JoinColumn(name = "edition_id", nullable = false)
     private Edition edition;
 
-    @Column(nullable = false)
-    private String name;
-
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "player1_id", nullable = false)
     private Player player1;
@@ -38,9 +40,8 @@ public class Team {
     protected Team() {
     }
 
-    public Team(Edition edition, String name, Player player1, Player player2) {
+    public Team(Edition edition, Player player1, Player player2) {
         this.edition = edition;
-        this.name = name;
         this.player1 = player1;
         this.player2 = player2;
     }
@@ -53,8 +54,9 @@ public class Team {
         return edition;
     }
 
+    /** "Ana &amp; Bea" — player1 (delante) first, always from the players' current names. */
     public String getName() {
-        return name;
+        return player1.getName() + " & " + player2.getName();
     }
 
     public Player getPlayer1() {

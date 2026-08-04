@@ -60,7 +60,14 @@ export function useUpdatePlayer() {
   return useMutation({
     mutationFn: (vars: { id: number; name?: string; active?: boolean }) =>
       updatePlayer(vars.id, { name: vars.name, active: vars.active }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['players'] }),
+    // Team names are derived from their players, so a rename renames the player's teams
+    // in every edition too — drop everything that shows a team or a ranking.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['players'] });
+      qc.invalidateQueries({ queryKey: queryKeys.playerStandings });
+      qc.invalidateQueries({ queryKey: queryKeys.editions });
+      qc.invalidateQueries({ queryKey: ['edition'] });
+    },
   });
 }
 

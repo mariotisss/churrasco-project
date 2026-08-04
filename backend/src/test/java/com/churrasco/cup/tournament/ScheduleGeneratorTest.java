@@ -25,7 +25,7 @@ class ScheduleGeneratorTest {
         Edition edition = new Edition("test");
         List<Team> result = new ArrayList<>();
         for (int i = 0; i < n; i++) {
-            result.add(new Team(edition, "T" + i, new Player("P" + i + "a"), new Player("P" + i + "b")));
+            result.add(new Team(edition, new Player("P" + i + "a"), new Player("P" + i + "b")));
         }
         return result;
     }

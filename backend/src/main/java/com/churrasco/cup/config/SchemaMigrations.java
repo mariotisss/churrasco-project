@@ -32,14 +32,28 @@ public class SchemaMigrations implements ApplicationRunner {
         addColumnIfMissing("edition", "is_test", "INTEGER NOT NULL DEFAULT 0");
         addColumnIfMissing("edition", "round_trip", "INTEGER NOT NULL DEFAULT 1");
         addColumnIfMissing("game", "chosen_side", "TEXT");
+        // team.name used to be a snapshot of the players' names taken at draw time, so it
+        // went stale as soon as a player was renamed. The name is derived from the players
+        // now; the column has to go or its NOT NULL would reject every new team.
+        dropColumnIfPresent("team", "name");
     }
 
     private void addColumnIfMissing(String table, String column, String definition) {
-        List<Map<String, Object>> columns = jdbc.queryForList("PRAGMA table_info(" + table + ")");
-        boolean present = columns.stream()
-                .anyMatch(c -> column.equalsIgnoreCase(String.valueOf(c.get("name"))));
-        if (!present) {
+        if (!hasColumn(table, column)) {
             jdbc.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition);
         }
+    }
+
+    /** Drops a column left over from an earlier model (SQLite supports it since 3.35). */
+    private void dropColumnIfPresent(String table, String column) {
+        if (hasColumn(table, column)) {
+            jdbc.execute("ALTER TABLE " + table + " DROP COLUMN " + column);
+        }
+    }
+
+    private boolean hasColumn(String table, String column) {
+        List<Map<String, Object>> columns = jdbc.queryForList("PRAGMA table_info(" + table + ")");
+        return columns.stream()
+                .anyMatch(c -> column.equalsIgnoreCase(String.valueOf(c.get("name"))));
     }
 }
