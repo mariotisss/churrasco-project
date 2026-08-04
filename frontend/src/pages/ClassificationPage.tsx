@@ -1,6 +1,6 @@
 import { usePlayerStandings } from '../api/hooks';
 import type { PlayerStanding } from '../api/types';
-import TeamCrest from '../components/TeamCrest';
+import PlayerAvatar from '../components/PlayerAvatar';
 
 const MEDAL: Record<number, string> = {
   1: 'bg-amber-500/20 text-amber-300 ring-amber-400/40',
@@ -88,7 +88,7 @@ function Row({ row, rank }: { row: PlayerStanding; rank: number }) {
       </td>
       <td className="px-2 py-3">
         <div className="flex items-center gap-2.5">
-          <TeamCrest name={row.name} size="sm" />
+          <PlayerAvatar player={{ id: row.playerId, name: row.name, photoVersion: row.photoVersion }} size="sm" />
           <span className="text-[15px] font-semibold text-zinc-100">{row.name}</span>
         </div>
       </td>

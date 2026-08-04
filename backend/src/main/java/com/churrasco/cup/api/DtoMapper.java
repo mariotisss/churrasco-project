@@ -6,6 +6,7 @@ import com.churrasco.cup.penalty.Penalty;
 import com.churrasco.cup.penalty.dto.PenaltyDto;
 import com.churrasco.cup.player.Player;
 import com.churrasco.cup.player.dto.PlayerDto;
+import com.churrasco.cup.player.dto.PlayerRefDto;
 import com.churrasco.cup.team.Team;
 import com.churrasco.cup.team.dto.TeamDto;
 import com.churrasco.cup.team.dto.TeamRefDto;
@@ -20,14 +21,27 @@ public final class DtoMapper {
         if (p == null) {
             return null;
         }
-        return new PlayerDto(p.getId(), p.getName(), p.isActive(), p.getCreatedAt());
+        return new PlayerDto(p.getId(), p.getName(), p.isActive(), p.getCreatedAt(), photoVersion(p));
+    }
+
+    public static PlayerRefDto toPlayerRefDto(Player p) {
+        if (p == null) {
+            return null;
+        }
+        return new PlayerRefDto(p.getId(), p.getName(), photoVersion(p));
+    }
+
+    /** Epoch millis of the last picture change, or null when the player has no picture. */
+    public static Long photoVersion(Player p) {
+        return p == null || p.getPhotoUpdatedAt() == null ? null : p.getPhotoUpdatedAt().toEpochMilli();
     }
 
     public static TeamRefDto toTeamRefDto(Team t) {
         if (t == null) {
             return null;
         }
-        return new TeamRefDto(t.getId(), t.getName());
+        return new TeamRefDto(t.getId(), t.getName(),
+                toPlayerRefDto(t.getPlayer1()), toPlayerRefDto(t.getPlayer2()));
     }
 
     public static TeamDto toTeamDto(Team t) {
@@ -47,6 +61,7 @@ public final class DtoMapper {
                 p.getId(),
                 player != null ? player.getId() : null,
                 player != null ? player.getName() : null,
+                photoVersion(player),
                 p.getPoints(),
                 p.getReason(),
                 p.getCreatedAt()

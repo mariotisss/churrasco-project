@@ -5,7 +5,10 @@ import com.churrasco.cup.player.dto.PlayerDto;
 import com.churrasco.cup.player.dto.PlayerStandingDto;
 import com.churrasco.cup.player.dto.UpdatePlayerRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -16,7 +19,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 
 @RestController
@@ -55,5 +61,31 @@ public class PlayerController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         service.delete(id);
+    }
+
+    /**
+     * The player's profile picture. Immutable for caching purposes: the URL carries a
+     * {@code ?v=<photoVersion>} that changes whenever the picture does, so clients can
+     * hold on to it for a year and still never show a stale face.
+     */
+    @GetMapping("/{id}/photo")
+    public ResponseEntity<byte[]> photo(@PathVariable Long id) {
+        return service.photo(id)
+                .map(image -> ResponseEntity.ok()
+                        .contentType(MediaType.IMAGE_JPEG)
+                        .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())
+                        .body(image))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/photo")
+    public PlayerDto uploadPhoto(@PathVariable Long id, @RequestParam("file") MultipartFile file)
+            throws IOException {
+        return service.setPhoto(id, file.getBytes());
+    }
+
+    @DeleteMapping("/{id}/photo")
+    public PlayerDto deletePhoto(@PathVariable Long id) {
+        return service.deletePhoto(id);
     }
 }

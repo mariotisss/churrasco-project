@@ -14,6 +14,12 @@ spring:
       # Runs schema.sql at startup (idempotent). SQLite is not "embedded" for
       # Spring, hence 'always' is required.
       mode: always
+  servlet:
+    multipart:
+      # Profile pictures. Anything bigger is a phone photo that the browser should have
+      # downscaled before uploading; the server re-encodes to a 256px square anyway.
+      max-file-size: 8MB
+      max-request-size: 8MB
   jpa:
     open-in-view: false
     hibernate:

@@ -6,7 +6,7 @@
 // yet are previewed from the current table and marked as provisional, so you can see
 // the shape of the tournament (and who is heading where) from day one.
 
-import type { EditionDetail, MatchDto, Side, StandingRow } from '../api/types';
+import type { EditionDetail, MatchDto, PlayerRef, Side, StandingRow } from '../api/types';
 import { hasSemifinals, leagueProgress, playoffSpots } from '../lib/tournament';
 import TeamCrest from './TeamCrest';
 import { SIDE_LABEL, SideSwatch, sidesForMatch } from './MatchSide';
@@ -16,6 +16,8 @@ interface Slot {
   /** League position, when the team is known. */
   seed: number | null;
   name: string | null;
+  /** The team's two players, for the crest; null while the team is undecided. */
+  players: [PlayerRef, PlayerRef] | null;
   /** Goals, once the tie has been played. */
   score: number | null;
   /** League points, shown while the tie is still only a preview. */
@@ -120,7 +122,7 @@ function SlotRow({ slot }: { slot: Slot }) {
         </span>
         {slot.name ? (
           <>
-            <TeamCrest name={slot.name} size="sm" />
+            <TeamCrest name={slot.name} players={slot.players ?? undefined} size="sm" />
             <span
               className={`min-w-0 flex-1 truncate text-[13px] ${
                 won
@@ -193,6 +195,7 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
     return {
       seed: row?.position ?? null,
       name: row?.teamName ?? null,
+      players: row ? [row.player1, row.player2] : null,
       score: null,
       points: row?.points ?? null,
       side: null,
@@ -212,6 +215,7 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
         {
           seed: seedOf(match.homeTeam.id),
           name: match.homeTeam.name,
+          players: [match.homeTeam.player1, match.homeTeam.player2],
           score: isPlayed ? match.homeScore : null,
           points: null,
           side: sides?.home ?? null,
@@ -220,6 +224,7 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
         {
           seed: seedOf(match.awayTeam.id),
           name: match.awayTeam.name,
+          players: [match.awayTeam.player1, match.awayTeam.player2],
           score: isPlayed ? match.awayScore : null,
           points: null,
           side: sides?.away ?? null,
@@ -255,6 +260,7 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
           ? [1, 2].map((n) => ({
               seed: null,
               name: null,
+              players: null,
               score: null,
               points: null,
               side: null,

@@ -85,7 +85,7 @@ export default function QualificationOdds({ detail }: { detail: EditionDetail })
           return (
             <li key={team.teamId} className="flex items-center gap-3">
               <div className="flex min-w-0 flex-[1.4] items-center gap-2.5">
-                <TeamCrest name={team.teamName} size="sm" />
+                <TeamCrest name={team.teamName} players={team.players} size="sm" />
                 <span
                   className={`min-w-0 truncate text-[15px] ${
                     qualifies ? 'font-semibold text-zinc-100' : 'font-medium text-zinc-300'

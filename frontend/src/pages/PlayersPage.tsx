@@ -1,9 +1,35 @@
-import { useState } from 'react';
-import { useCreatePlayer, useDeletePlayer, usePlayers, useUpdatePlayer } from '../api/hooks';
+import { useRef, useState } from 'react';
+import {
+  useCreatePlayer,
+  useDeletePlayer,
+  useDeletePlayerPhoto,
+  usePlayers,
+  useUpdatePlayer,
+  useUploadPlayerPhoto,
+} from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { Player } from '../api/types';
-import TeamCrest from '../components/TeamCrest';
+import { toSquareJpeg } from '../lib/image';
+import PlayerAvatar from '../components/PlayerAvatar';
 import ConfirmDialog from '../components/ConfirmDialog';
+
+/** Camera glyph for the "set a picture" affordance on each avatar. */
+function CameraIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.1-2h8.4l1.1 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z" />
+      <circle cx="12" cy="13" r="3.4" />
+    </svg>
+  );
+}
 
 export default function PlayersPage() {
   const { data: players, isLoading } = usePlayers(false);
@@ -84,10 +110,30 @@ export default function PlayersPage() {
 function PlayerCard({ player }: { player: Player }) {
   const updatePlayer = useUpdatePlayer();
   const deletePlayer = useDeletePlayer();
+  const uploadPhoto = useUploadPlayerPhoto();
+  const deletePhoto = useDeletePlayerPhoto();
+  const fileInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(player.name);
   const [confirming, setConfirming] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  async function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // so picking the same file again still fires a change
+    if (!file) return;
+    setPhotoError(null);
+    try {
+      const image = await toSquareJpeg(file);
+      uploadPhoto.mutate(
+        { id: player.id, image },
+        { onError: (err) => setPhotoError(apiErrorMessage(err, 'No se ha podido subir la foto')) },
+      );
+    } catch {
+      setPhotoError('No se ha podido leer esa imagen');
+    }
+  }
 
   function saveName() {
     const trimmed = draft.trim();
@@ -113,7 +159,34 @@ function PlayerCard({ player }: { player: Player }) {
   return (
     <li className="panel p-4">
       <div className="flex items-center gap-3">
-        <TeamCrest name={player.name} size="lg" />
+        {/* The avatar is the upload control: click it to set or replace the picture. */}
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          disabled={uploadPhoto.isPending}
+          title={player.photoVersion === null ? 'Subir foto' : 'Cambiar foto'}
+          className="group relative shrink-0 rounded-full ring-offset-2 ring-offset-coal-900 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400"
+        >
+          <PlayerAvatar player={player} size="lg" />
+          <span
+            className={`absolute inset-0 grid place-items-center rounded-full bg-coal-950/70 font-condensed text-[10px] font-bold uppercase tracking-wide text-zinc-100 transition ${
+              uploadPhoto.isPending ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+          >
+            {uploadPhoto.isPending ? '…' : 'Foto'}
+          </span>
+          {/* Always visible: there is no hover on a phone, and this is the only way in. */}
+          <span className="absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full border border-coal-900 bg-coal-700 text-zinc-200 shadow-md">
+            <CameraIcon className="h-3 w-3" />
+          </span>
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*"
+          onChange={pickPhoto}
+          className="hidden"
+        />
         <div className="min-w-0 flex-1">
           {editing ? (
             <input
@@ -130,10 +203,21 @@ function PlayerCard({ player }: { player: Player }) {
         </div>
       </div>
 
+      {photoError && <p className="mt-2 text-xs text-rose-300">{photoError}</p>}
+
       <div className="mt-3 flex items-center gap-1.5 border-t border-coal-800/80 pt-3">
         <button onClick={() => setEditing(true)} className="btn-ghost text-xs">
           Editar
         </button>
+        {player.photoVersion !== null && (
+          <button
+            onClick={() => deletePhoto.mutate(player.id)}
+            disabled={deletePhoto.isPending}
+            className="btn-ghost text-xs"
+          >
+            Quitar foto
+          </button>
+        )}
         <span className="flex-1" />
         <button
           onClick={openConfirm}

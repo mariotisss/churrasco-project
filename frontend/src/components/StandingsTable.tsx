@@ -84,7 +84,7 @@ export default function StandingsTable({
                   </td>
                   <td className="px-2 py-3">
                     <div className="flex items-center gap-2.5">
-                      <TeamCrest name={row.teamName} size="sm" />
+                      <TeamCrest name={row.teamName} players={[row.player1, row.player2]} size="sm" />
                       <span className="text-[15px] font-semibold text-zinc-100">
                         {row.teamName}
                       </span>

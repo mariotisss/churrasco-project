@@ -10,6 +10,7 @@ package com.churrasco.cup.player.dto;
 public record PlayerStandingDto(
         Long playerId,
         String name,
+        Long photoVersion,
         int points,
         int championships,
         int runnerUps,

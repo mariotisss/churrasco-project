@@ -13,6 +13,7 @@ import {
   deleteEdition,
   deletePenalty,
   deletePlayer,
+  deletePlayerPhoto,
   drawTeams,
   getEdition,
   getEditions,
@@ -22,6 +23,7 @@ import {
   recordResult,
   updatePenalty,
   updatePlayer,
+  uploadPlayerPhoto,
 } from './client';
 
 export const queryKeys = {
@@ -56,18 +58,41 @@ export function useCreatePlayer() {
 }
 
 export function useUpdatePlayer() {
-  const qc = useQueryClient();
+  const refresh = useEverythingWithFaces();
   return useMutation({
     mutationFn: (vars: { id: number; name?: string; active?: boolean }) =>
       updatePlayer(vars.id, { name: vars.name, active: vars.active }),
     // Team names are derived from their players, so a rename renames the player's teams
     // in every edition too — drop everything that shows a team or a ranking.
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['players'] });
-      qc.invalidateQueries({ queryKey: queryKeys.playerStandings });
-      qc.invalidateQueries({ queryKey: queryKeys.editions });
-      qc.invalidateQueries({ queryKey: ['edition'] });
-    },
+    onSuccess: refresh,
+  });
+}
+
+/** A new (or removed) picture shows up in teams, brackets and rankings, so refresh all. */
+function useEverythingWithFaces() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: ['players'] });
+    qc.invalidateQueries({ queryKey: queryKeys.playerStandings });
+    qc.invalidateQueries({ queryKey: queryKeys.penalties });
+    qc.invalidateQueries({ queryKey: queryKeys.editions });
+    qc.invalidateQueries({ queryKey: ['edition'] });
+  };
+}
+
+export function useUploadPlayerPhoto() {
+  const refresh = useEverythingWithFaces();
+  return useMutation({
+    mutationFn: (vars: { id: number; image: Blob }) => uploadPlayerPhoto(vars.id, vars.image),
+    onSuccess: refresh,
+  });
+}
+
+export function useDeletePlayerPhoto() {
+  const refresh = useEverythingWithFaces();
+  return useMutation({
+    mutationFn: (id: number) => deletePlayerPhoto(id),
+    onSuccess: refresh,
   });
 }
 

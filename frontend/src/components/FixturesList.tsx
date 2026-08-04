@@ -141,7 +141,7 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
           >
             {match.homeTeam.name}
           </span>
-          <TeamCrest name={match.homeTeam.name} size="sm" />
+          <TeamCrest name={match.homeTeam.name} players={[match.homeTeam.player1, match.homeTeam.player2]} size="sm" />
         </SideCard>
 
         {/* Score */}
@@ -165,7 +165,7 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
           edge="right"
           className="flex min-w-0 flex-1 items-center gap-2.5 py-1.5 pl-2 pr-2.5"
         >
-          <TeamCrest name={match.awayTeam.name} size="sm" />
+          <TeamCrest name={match.awayTeam.name} players={[match.awayTeam.player1, match.awayTeam.player2]} size="sm" />
           <span
             className={`min-w-0 truncate text-[15px] ${
               awayWon ? 'font-bold text-white' : 'font-medium text-zinc-200'

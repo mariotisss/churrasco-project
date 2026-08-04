@@ -7,6 +7,7 @@ public record PenaltyDto(
         Long id,
         Long playerId,
         String playerName,
+        Long playerPhotoVersion,
         int points,
         String reason,
         Instant createdAt

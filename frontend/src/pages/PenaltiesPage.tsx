@@ -8,7 +8,7 @@ import {
 } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { Penalty } from '../api/types';
-import TeamCrest from '../components/TeamCrest';
+import PlayerAvatar from '../components/PlayerAvatar';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const POINT_OPTIONS = [1, 2] as const;
@@ -228,7 +228,7 @@ function PenaltyRow({ penalty }: { penalty: Penalty }) {
   return (
     <li className="panel p-4">
       <div className="flex items-start gap-3">
-        <TeamCrest name={penalty.playerName} size="md" />
+        <PlayerAvatar player={{ id: penalty.playerId, name: penalty.playerName, photoVersion: penalty.playerPhotoVersion }} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="text-[15px] font-semibold text-zinc-100">{penalty.playerName}</span>

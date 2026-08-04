@@ -1,4 +1,5 @@
-import TeamCrest from './TeamCrest';
+import type { PlayerRef } from '../api/types';
+import PlayerAvatar from './PlayerAvatar';
 
 type IconProps = { className?: string };
 
@@ -40,12 +41,12 @@ export function ShieldIcon({ className }: IconProps) {
 function PositionRow({
   tone,
   label,
-  name,
+  player,
   Icon,
 }: {
   tone: 'ember' | 'sky';
   label: string;
-  name: string;
+  player: PlayerRef;
   Icon: (p: IconProps) => JSX.Element;
 }) {
   const accent = tone === 'ember' ? 'text-ember-300' : 'text-sky-300';
@@ -58,8 +59,8 @@ function PositionRow({
       <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg border ${badge}`}>
         <Icon className="h-4 w-4" />
       </span>
-      <TeamCrest name={name} size="sm" />
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-100">{name}</span>
+      <PlayerAvatar player={player} size="sm" />
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-100">{player.name}</span>
       <span className={`shrink-0 font-condensed text-[10px] font-bold uppercase tracking-broadcast ${accent}`}>
         {label}
       </span>
@@ -68,7 +69,7 @@ function PositionRow({
 }
 
 /** A small "pitch" showing who plays up front (delante) and who plays at the back (atrás). */
-export default function TeamLineup({ front, back }: { front: string; back: string }) {
+export default function TeamLineup({ front, back }: { front: PlayerRef; back: PlayerRef }) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-coal-700/60 bg-gradient-to-b from-coal-900/60 to-coal-950/60">
       {/* Faint pitch markings: centre circle + halfway line. */}
@@ -76,8 +77,8 @@ export default function TeamLineup({ front, back }: { front: string; back: strin
         <div className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.06]" />
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-dashed border-white/[0.06]" />
       </div>
-      <PositionRow tone="ember" label="Delante" name={front} Icon={AttackIcon} />
-      <PositionRow tone="sky" label="Atrás" name={back} Icon={ShieldIcon} />
+      <PositionRow tone="ember" label="Delante" player={front} Icon={AttackIcon} />
+      <PositionRow tone="sky" label="Atrás" player={back} Icon={ShieldIcon} />
     </div>
   );
 }

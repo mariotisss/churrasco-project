@@ -26,6 +26,14 @@ public class Player {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
+    /**
+     * When the profile picture was last set, or null when the player has none. Doubles
+     * as the cache-busting version in the photo URL, so clients see a new picture the
+     * moment it is uploaded without ever re-fetching an unchanged one.
+     */
+    @Column(name = "photo_updated_at")
+    private Instant photoUpdatedAt;
+
     protected Player() {
     }
 
@@ -55,5 +63,13 @@ public class Player {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getPhotoUpdatedAt() {
+        return photoUpdatedAt;
+    }
+
+    public void setPhotoUpdatedAt(Instant photoUpdatedAt) {
+        this.photoUpdatedAt = photoUpdatedAt;
     }
 }

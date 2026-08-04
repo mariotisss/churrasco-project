@@ -205,7 +205,7 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
                     edge="left"
                     className="flex min-w-0 items-center gap-2 py-1.5 pl-2.5 pr-3"
                   >
-                    <TeamCrest name={next.homeTeam.name} size="md" />
+                    <TeamCrest name={next.homeTeam.name} players={[next.homeTeam.player1, next.homeTeam.player2]} size="md" />
                     <span className="truncate text-[15px] font-semibold text-zinc-100">
                       {next.homeTeam.name}
                     </span>
@@ -219,7 +219,7 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
                     <span className="truncate text-[15px] font-semibold text-zinc-100">
                       {next.awayTeam.name}
                     </span>
-                    <TeamCrest name={next.awayTeam.name} size="md" />
+                    <TeamCrest name={next.awayTeam.name} players={[next.awayTeam.player1, next.awayTeam.player2]} size="md" />
                   </SideCard>
                 </>
               );
@@ -291,10 +291,10 @@ function TeamsList({ teams }: { teams: TeamDto[] }) {
             className="animate-rise rounded-xl border border-coal-700/50 bg-coal-950/40 p-3 transition hover:border-coal-600"
           >
             <div className="mb-2.5 flex items-center gap-2.5">
-              <TeamCrest name={team.name} size="md" />
+              <TeamCrest name={team.name} players={[team.player1, team.player2]} size="md" />
               <p className="truncate text-[15px] font-semibold text-zinc-100">{team.name}</p>
             </div>
-            <TeamLineup front={team.player1.name} back={team.player2.name} />
+            <TeamLineup front={team.player1} back={team.player2} />
           </li>
         ))}
       </ul>

@@ -32,6 +32,7 @@ public class SchemaMigrations implements ApplicationRunner {
         addColumnIfMissing("edition", "is_test", "INTEGER NOT NULL DEFAULT 0");
         addColumnIfMissing("edition", "round_trip", "INTEGER NOT NULL DEFAULT 1");
         addColumnIfMissing("game", "chosen_side", "TEXT");
+        addColumnIfMissing("player", "photo_updated_at", "INTEGER");
         // team.name used to be a snapshot of the players' names taken at draw time, so it
         // went stale as soon as a player was renamed. The name is derived from the players
         // now; the column has to go or its NOT NULL would reject every new team.

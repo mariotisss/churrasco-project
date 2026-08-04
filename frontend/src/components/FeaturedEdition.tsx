@@ -55,7 +55,7 @@ export default function FeaturedEdition({ editionId }: { editionId: number }) {
               </p>
               {leader ? (
                 <div className="mt-2.5 flex items-center gap-3">
-                  <TeamCrest name={leader.teamName} size="md" />
+                  <TeamCrest name={leader.teamName} players={[leader.player1, leader.player2]} size="md" />
                   <div className="min-w-0">
                     <p className="truncate text-lg font-semibold text-white">
                       {leader.teamName}
@@ -77,7 +77,7 @@ export default function FeaturedEdition({ editionId }: { editionId: number }) {
               </p>
               {next ? (
                 <div className="mt-2.5 flex items-center justify-center gap-3">
-                  <TeamCrest name={next.homeTeam.name} size="sm" />
+                  <TeamCrest name={next.homeTeam.name} players={[next.homeTeam.player1, next.homeTeam.player2]} size="sm" />
                   <span className="truncate text-sm font-semibold text-zinc-200">
                     {next.homeTeam.name}
                   </span>
@@ -85,7 +85,7 @@ export default function FeaturedEdition({ editionId }: { editionId: number }) {
                   <span className="truncate text-sm font-semibold text-zinc-200">
                     {next.awayTeam.name}
                   </span>
-                  <TeamCrest name={next.awayTeam.name} size="sm" />
+                  <TeamCrest name={next.awayTeam.name} players={[next.awayTeam.player1, next.awayTeam.player2]} size="sm" />
                 </div>
               ) : (
                 <p className="mt-2.5 font-condensed text-sm font-semibold uppercase tracking-wide text-emerald-300">

@@ -1,8 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Player, TeamDto } from '../api/types';
+import type { Player, PlayerRef, TeamDto } from '../api/types';
+import PlayerAvatar from './PlayerAvatar';
 import TeamCrest from './TeamCrest';
 import TeamLineup, { AttackIcon, ShieldIcon } from './TeamLineup';
+
+// The roulette spins bare names, so the pot and the reels only ever know who they are
+// showing by name. This directory lets them put a face to it without every reel having
+// to be handed the whole roster.
+const Directory = createContext<Map<string, PlayerRef>>(new Map());
+
+function usePlayer(name: string): PlayerRef {
+  const byName = useContext(Directory);
+  return byName.get(name) ?? { id: 0, name, photoVersion: null };
+}
+
+/** One person in the draw: their face if they have one, initials otherwise. */
+function DrawFace({ name, size }: { name: string; size: 'sm' | 'xl' }) {
+  return <PlayerAvatar player={usePlayer(name)} size={size} />;
+}
 
 type Step =
   | { kind: 'intro' }
@@ -181,7 +197,7 @@ function RouletteRow({
           </span>
         ) : (
           <span className={locked ? '' : 'opacity-60'}>
-            <TeamCrest name={name} size="sm" />
+            <DrawFace name={name} size="sm" />
           </span>
         )}
         <span
@@ -253,7 +269,7 @@ function Pot({
               }`}
             >
               <span className={isOut ? 'opacity-50 grayscale' : ''}>
-                <TeamCrest name={name} size="sm" />
+                <DrawFace name={name} size="sm" />
               </span>
               {name}
               {isPicked && <span className="text-emerald-400">✓</span>}
@@ -279,7 +295,7 @@ function DrawnTeams({ teams }: { teams: TeamDto[] }) {
             key={team.id}
             className="animate-rise flex items-center gap-2 rounded-xl border border-coal-700/60 bg-coal-900/70 py-1.5 pl-1.5 pr-3"
           >
-            <TeamCrest name={team.name} size="sm" />
+            <TeamCrest name={team.name} players={[team.player1, team.player2]} size="sm" />
             <span className="text-[13px] font-semibold text-zinc-200">{team.name}</span>
           </span>
         ))}
@@ -377,7 +393,7 @@ function TeamStep({
         <div className="mt-6 flex flex-col items-center">
           {beat === 'done' ? (
             <span className="animate-pop-in">
-              <TeamCrest name={team.name} size="xl" />
+              <TeamCrest name={team.name} players={[team.player1, team.player2]} size="xl" />
             </span>
           ) : (
             <span className="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-coal-700 font-display text-2xl text-coal-600">
@@ -451,7 +467,7 @@ function SatOutStep({
       <Stage eyebrow="Número impar · alguien se queda fuera" tone="amber">
         <div className="mt-6 flex flex-col items-center">
           <span className={locked ? '' : 'opacity-60'}>
-            <TeamCrest name={name} size="xl" />
+            <DrawFace name={name} size="xl" />
           </span>
           <h2
             key={locked ? 'locked' : 'spinning'}
@@ -511,6 +527,16 @@ export default function DrawRevealOverlay({
     const names = teams.flatMap((t) => [t.player1.name, t.player2.name]);
     if (satOutPlayer) names.push(satOutPlayer.name);
     return names.sort((a, b) => a.localeCompare(b));
+  }, [teams, satOutPlayer]);
+
+  const directory = useMemo(() => {
+    const map = new Map<string, PlayerRef>();
+    for (const t of teams) {
+      map.set(t.player1.name, t.player1);
+      map.set(t.player2.name, t.player2);
+    }
+    if (satOutPlayer) map.set(satOutPlayer.name, satOutPlayer);
+    return map;
   }, [teams, satOutPlayer]);
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -590,120 +616,122 @@ export default function DrawRevealOverlay({
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-coal-950" onClick={tap}>
-      <div className="pointer-events-none absolute inset-0 bg-grid-faint bg-grid opacity-40" />
-      <div className="pointer-events-none absolute inset-0 bg-ember-radial" />
+    <Directory.Provider value={directory}>
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-coal-950" onClick={tap}>
+        <div className="pointer-events-none absolute inset-0 bg-grid-faint bg-grid opacity-40" />
+        <div className="pointer-events-none absolute inset-0 bg-ember-radial" />
 
-      <div className="relative flex min-h-full flex-col items-center justify-center gap-5 px-5 py-10">
-        {step.kind === 'intro' && (
-          <>
-            <div key="intro" className="text-center">
-              <p className="animate-pop-in text-5xl">🎲</p>
-              <h2 className="mt-4 animate-slam-in font-display text-4xl uppercase tracking-tight text-white sm:text-5xl">
-                ¡Sorteo realizado!
-              </h2>
-              <p className="mt-3 font-condensed text-sm font-bold uppercase tracking-broadcast text-ember-400">
-                {satOutPlayer
-                  ? 'Toca para ver quién se queda fuera'
-                  : `Toca para formar los ${teamCount} equipos`}
+        <div className="relative flex min-h-full flex-col items-center justify-center gap-5 px-5 py-10">
+          {step.kind === 'intro' && (
+            <>
+              <div key="intro" className="text-center">
+                <p className="animate-pop-in text-5xl">🎲</p>
+                <h2 className="mt-4 animate-slam-in font-display text-4xl uppercase tracking-tight text-white sm:text-5xl">
+                  ¡Sorteo realizado!
+                </h2>
+                <p className="mt-3 font-condensed text-sm font-bold uppercase tracking-broadcast text-ember-400">
+                  {satOutPlayer
+                    ? 'Toca para ver quién se queda fuera'
+                    : `Toca para formar los ${teamCount} equipos`}
+                </p>
+              </div>
+              <Pot participants={participants} drawn={new Set()} />
+            </>
+          )}
+
+          {step.kind === 'satOut' && satOutPlayer && (
+            <SatOutStep
+              key="satOut"
+              player={satOutPlayer}
+              pool={participants}
+              participants={participants}
+              rush={rush}
+              onSettled={onSettled}
+            />
+          )}
+
+          {step.kind === 'team' && (
+            <TeamStep
+              key={teams[step.index].id}
+              team={teams[step.index]}
+              index={step.index}
+              total={teamCount}
+              pool={spinPool}
+              participants={participants}
+              drawn={drawnBefore}
+              drawnTeams={teams.slice(0, step.index)}
+              rush={rush}
+              onSettled={onSettled}
+            />
+          )}
+
+          {step.kind === 'summary' && (
+            <div key="summary" className="w-full max-w-2xl text-center">
+              <p className="animate-fade-in font-condensed text-sm font-bold uppercase tracking-broadcast text-ember-400">
+                Los {teamCount} equipos
               </p>
+              <h2 className="mt-2 animate-slam-in font-display text-3xl uppercase tracking-tight text-white sm:text-4xl">
+                ¡Que empiece la competición!
+              </h2>
+              <ul className="mt-8 grid gap-3 text-left sm:grid-cols-2">
+                {teams.map((team, i) => (
+                  <li
+                    key={team.id}
+                    style={{ animationDelay: `${200 + i * 120}ms` }}
+                    className="animate-rise rounded-xl border border-coal-700/60 bg-coal-900/80 p-3"
+                  >
+                    <div className="mb-2.5 flex items-center gap-2.5">
+                      <TeamCrest name={team.name} players={[team.player1, team.player2]} size="md" />
+                      <p className="truncate text-[15px] font-semibold text-zinc-100">{team.name}</p>
+                    </div>
+                    <TeamLineup front={team.player1} back={team.player2} />
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={onClose}
+                className="btn-primary animate-rise mt-8 px-8"
+                style={{ animationDelay: `${200 + teamCount * 120}ms` }}
+              >
+                ¡A jugar!
+              </button>
             </div>
-            <Pot participants={participants} drawn={new Set()} />
-          </>
-        )}
+          )}
 
-        {step.kind === 'satOut' && satOutPlayer && (
-          <SatOutStep
-            key="satOut"
-            player={satOutPlayer}
-            pool={participants}
-            participants={participants}
-            rush={rush}
-            onSettled={onSettled}
-          />
-        )}
-
-        {step.kind === 'team' && (
-          <TeamStep
-            key={teams[step.index].id}
-            team={teams[step.index]}
-            index={step.index}
-            total={teamCount}
-            pool={spinPool}
-            participants={participants}
-            drawn={drawnBefore}
-            drawnTeams={teams.slice(0, step.index)}
-            rush={rush}
-            onSettled={onSettled}
-          />
-        )}
-
-        {step.kind === 'summary' && (
-          <div key="summary" className="w-full max-w-2xl text-center">
-            <p className="animate-fade-in font-condensed text-sm font-bold uppercase tracking-broadcast text-ember-400">
-              Los {teamCount} equipos
-            </p>
-            <h2 className="mt-2 animate-slam-in font-display text-3xl uppercase tracking-tight text-white sm:text-4xl">
-              ¡Que empiece la competición!
-            </h2>
-            <ul className="mt-8 grid gap-3 text-left sm:grid-cols-2">
-              {teams.map((team, i) => (
-                <li
-                  key={team.id}
-                  style={{ animationDelay: `${200 + i * 120}ms` }}
-                  className="animate-rise rounded-xl border border-coal-700/60 bg-coal-900/80 p-3"
-                >
-                  <div className="mb-2.5 flex items-center gap-2.5">
-                    <TeamCrest name={team.name} size="md" />
-                    <p className="truncate text-[15px] font-semibold text-zinc-100">{team.name}</p>
-                  </div>
-                  <TeamLineup front={team.player1.name} back={team.player2.name} />
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={onClose}
-              className="btn-primary animate-rise mt-8 px-8"
-              style={{ animationDelay: `${200 + teamCount * 120}ms` }}
-            >
-              ¡A jugar!
-            </button>
-          </div>
-        )}
-
-        {/* Tap-to-continue hint + progress dots + skip, hidden on the summary */}
-        {step.kind !== 'summary' && (
-          <div className="mt-3 flex flex-col items-center gap-3">
-            <p
-              className={`font-condensed text-[11px] font-semibold uppercase tracking-broadcast ${
-                waiting ? 'text-ember-400/80' : 'animate-pulse text-zinc-500'
-              }`}
-            >
-              {waiting ? 'Sorteando…' : 'Toca para continuar →'}
-            </p>
-            <div className="flex gap-1.5">
-              {steps.slice(0, -1).map((_, i) => (
-                <span
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i === stepIndex ? 'w-5 bg-ember-500' : 'w-1.5 bg-coal-600'
-                  }`}
-                />
-              ))}
+          {/* Tap-to-continue hint + progress dots + skip, hidden on the summary */}
+          {step.kind !== 'summary' && (
+            <div className="mt-3 flex flex-col items-center gap-3">
+              <p
+                className={`font-condensed text-[11px] font-semibold uppercase tracking-broadcast ${
+                  waiting ? 'text-ember-400/80' : 'animate-pulse text-zinc-500'
+                }`}
+              >
+                {waiting ? 'Sorteando…' : 'Toca para continuar →'}
+              </p>
+              <div className="flex gap-1.5">
+                {steps.slice(0, -1).map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i === stepIndex ? 'w-5 bg-ember-500' : 'w-1.5 bg-coal-600'
+                    }`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStepIndex(steps.length - 1);
+                }}
+                className="btn-ghost text-xs"
+              >
+                Saltar presentación →
+              </button>
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setStepIndex(steps.length - 1);
-              }}
-              className="btn-ghost text-xs"
-            >
-              Saltar presentación →
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>,
+    </Directory.Provider>,
     document.body,
   );
 }

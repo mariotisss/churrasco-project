@@ -1,53 +1,51 @@
-// Deterministic colored "crest" (initials avatar) for a team, broadcast-style.
-// The same team name always yields the same hue, so teams stay recognizable.
+// A team is two people, so its crest is two overlapping circles — one face per player,
+// falling back to the initials badge for whoever has no picture yet. Where there is no
+// pair to show (a bracket slot still to be decided, a name being drawn), it degrades to
+// a single badge built from the given name.
 
-const PALETTE = [
-  'from-rose-500 to-rose-700',
-  'from-amber-500 to-orange-700',
-  'from-emerald-500 to-emerald-700',
-  'from-sky-500 to-blue-700',
-  'from-violet-500 to-purple-700',
-  'from-pink-500 to-fuchsia-700',
-  'from-teal-500 to-cyan-700',
-  'from-lime-500 to-green-700',
-];
+import type { PlayerRef } from '../api/types';
+import PlayerAvatar, { AVATAR_SIZES, gradientFor, initials } from './PlayerAvatar';
+import type { AvatarSize } from './PlayerAvatar';
 
-function hash(str: string): number {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return '?';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-}
-
-const SIZES = {
-  sm: 'h-7 w-7 text-[11px]',
-  md: 'h-9 w-9 text-xs',
-  lg: 'h-12 w-12 text-base',
-  xl: 'h-16 w-16 text-2xl',
+/** How far the second circle slides over the first, per size. */
+const OVERLAP: Record<AvatarSize, string> = {
+  xs: '-ml-2',
+  sm: '-ml-2.5',
+  md: '-ml-3',
+  lg: '-ml-4',
+  xl: '-ml-5',
 };
+
+/** Separates the two circles from each other against any panel background. */
+const SEPARATOR = 'ring-2 ring-coal-900';
 
 export default function TeamCrest({
   name,
+  players,
   size = 'md',
 }: {
+  /** Used for the fallback badge, and as the accessible label. */
   name: string;
-  size?: keyof typeof SIZES;
+  /** The team's two players. Omitted where only a name is known. */
+  players?: [PlayerRef, PlayerRef];
+  size?: AvatarSize;
 }) {
-  const gradient = PALETTE[hash(name) % PALETTE.length];
+  if (!players) {
+    return (
+      <span
+        className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br font-condensed font-bold uppercase tracking-wide text-white shadow-md ring-1 ring-white/15 ${gradientFor(name)} ${AVATAR_SIZES[size]}`}
+        aria-hidden
+      >
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent" />
+        <span className="relative">{initials(name)}</span>
+      </span>
+    );
+  }
+
   return (
-    <span
-      className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br font-condensed font-bold uppercase tracking-wide text-white shadow-md ring-1 ring-white/15 ${gradient} ${SIZES[size]}`}
-      aria-hidden
-    >
-      {/* glossy top highlight */}
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent" />
-      <span className="relative">{initials(name)}</span>
+    <span className="relative inline-flex shrink-0 items-center" aria-hidden>
+      <PlayerAvatar player={players[0]} size={size} className={`z-10 ${SEPARATOR}`} />
+      <PlayerAvatar player={players[1]} size={size} className={`${OVERLAP[size]} ${SEPARATOR}`} />
     </span>
   );
 }

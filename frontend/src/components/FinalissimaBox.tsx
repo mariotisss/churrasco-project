@@ -41,7 +41,7 @@ export default function FinalissimaBox({
                 <span className="truncate text-sm font-semibold text-zinc-200">
                   {finalissima.homeTeam.name}
                 </span>
-                <TeamCrest name={finalissima.homeTeam.name} size="sm" />
+                <TeamCrest name={finalissima.homeTeam.name} players={[finalissima.homeTeam.player1, finalissima.homeTeam.player2]} size="sm" />
               </SideCard>
               <span className="scoreboard text-xl">
                 <span>{finalissima.homeScore}</span>
@@ -53,7 +53,7 @@ export default function FinalissimaBox({
                 edge="right"
                 className="flex min-w-0 flex-1 items-center gap-2 py-1 pl-2 pr-2.5"
               >
-                <TeamCrest name={finalissima.awayTeam.name} size="sm" />
+                <TeamCrest name={finalissima.awayTeam.name} players={[finalissima.awayTeam.player1, finalissima.awayTeam.player2]} size="sm" />
                 <span className="truncate text-sm font-semibold text-zinc-200">
                   {finalissima.awayTeam.name}
                 </span>

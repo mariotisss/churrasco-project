@@ -1,5 +1,6 @@
 package com.churrasco.cup.tournament;
 
+import com.churrasco.cup.api.DtoMapper;
 import com.churrasco.cup.edition.dto.StandingRowDto;
 import com.churrasco.cup.match.Match;
 import com.churrasco.cup.match.MatchStatus;
@@ -64,6 +65,8 @@ public class StandingsCalculator {
                     position++,
                     a.team.getId(),
                     a.team.getName(),
+                    DtoMapper.toPlayerRefDto(a.team.getPlayer1()),
+                    DtoMapper.toPlayerRefDto(a.team.getPlayer2()),
                     a.played,
                     a.won,
                     a.lost,

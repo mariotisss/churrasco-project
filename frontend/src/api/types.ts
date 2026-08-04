@@ -5,11 +5,22 @@ export interface Player {
   name: string;
   active: boolean;
   createdAt: string;
+  /** When the profile picture was last set (epoch millis), or null if there is none. */
+  photoVersion: number | null;
+}
+
+/** Just enough of a player to draw them: name plus profile-picture version. */
+export interface PlayerRef {
+  id: number;
+  name: string;
+  photoVersion: number | null;
 }
 
 export interface TeamRef {
   id: number;
   name: string;
+  player1: PlayerRef;
+  player2: PlayerRef;
 }
 
 export interface TeamDto {
@@ -46,6 +57,8 @@ export interface StandingRow {
   position: number;
   teamId: number;
   teamName: string;
+  player1: PlayerRef;
+  player2: PlayerRef;
   played: number;
   won: number;
   lost: number;
@@ -69,6 +82,7 @@ export interface EditionSummary {
 export interface PlayerStanding {
   playerId: number;
   name: string;
+  photoVersion: number | null;
   points: number;
   championships: number;
   runnerUps: number;
@@ -79,6 +93,7 @@ export interface Penalty {
   id: number;
   playerId: number;
   playerName: string;
+  playerPhotoVersion: number | null;
   points: number;
   reason: string;
   createdAt: string;

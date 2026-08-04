@@ -9,7 +9,16 @@ CREATE TABLE IF NOT EXISTS player (
     name        TEXT    NOT NULL UNIQUE,
     active      INTEGER NOT NULL DEFAULT 1,
     -- epoch in milliseconds (see InstantEpochMilliConverter)
-    created_at  INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER) * 1000)
+    created_at  INTEGER NOT NULL DEFAULT (CAST(strftime('%s','now') AS INTEGER) * 1000),
+    -- when the profile picture was last set (epoch millis), NULL if there is none
+    photo_updated_at INTEGER
+);
+
+-- Profile pictures live apart from the player row: the bytes are only read when the
+-- image is served, never when listing players or loading an edition.
+CREATE TABLE IF NOT EXISTS player_photo (
+    player_id INTEGER PRIMARY KEY REFERENCES player(id) ON DELETE CASCADE,
+    image     BLOB NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS edition (

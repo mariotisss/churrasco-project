@@ -101,7 +101,7 @@ export default function EditionsPage() {
                     className="group flex min-w-[200px] items-center gap-3 rounded-2xl border border-coal-700/60 bg-gradient-to-br from-coal-850/90 to-coal-900/95 p-4 shadow-card transition hover:border-emerald-500/40"
                   >
                     <span className="relative">
-                      <TeamCrest name={e.champion!.name} size="lg" />
+                      <TeamCrest name={e.champion!.name} players={[e.champion!.player1, e.champion!.player2]} size="lg" />
                       <span className="absolute -right-1.5 -top-1.5 text-base">🏆</span>
                     </span>
                     <div className="min-w-0">

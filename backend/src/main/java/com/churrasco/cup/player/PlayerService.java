@@ -18,10 +18,12 @@ import com.churrasco.cup.team.TeamRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class PlayerService {
@@ -35,18 +37,24 @@ public class PlayerService {
     private final EditionRepository editionRepository;
     private final MatchRepository matchRepository;
     private final PenaltyRepository penaltyRepository;
+    private final PlayerPhotoRepository photoRepository;
+    private final ProfilePictureEncoder pictureEncoder;
 
     public PlayerService(
             PlayerRepository repository,
             TeamRepository teamRepository,
             EditionRepository editionRepository,
             MatchRepository matchRepository,
-            PenaltyRepository penaltyRepository) {
+            PenaltyRepository penaltyRepository,
+            PlayerPhotoRepository photoRepository,
+            ProfilePictureEncoder pictureEncoder) {
         this.repository = repository;
         this.teamRepository = teamRepository;
         this.editionRepository = editionRepository;
         this.matchRepository = matchRepository;
         this.penaltyRepository = penaltyRepository;
+        this.photoRepository = photoRepository;
+        this.pictureEncoder = pictureEncoder;
     }
 
     @Transactional(readOnly = true)
@@ -82,6 +90,41 @@ public class PlayerService {
             player.setActive(request.active());
         }
         return DtoMapper.toPlayerDto(player);
+    }
+
+    /**
+     * Sets the player's profile picture. Whatever is uploaded is re-encoded to a square
+     * JPEG before being stored, so the bytes served back are always a real image.
+     */
+    @Transactional
+    public PlayerDto setPhoto(Long id, byte[] uploaded) {
+        Player player = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Jugador " + id + " no encontrado"));
+        if (uploaded == null || uploaded.length == 0) {
+            throw new BadRequestException("No se ha recibido ninguna imagen");
+        }
+
+        byte[] image = pictureEncoder.toSquareJpeg(uploaded);
+        PlayerPhoto photo = photoRepository.findById(id).orElseGet(() -> new PlayerPhoto(id, image));
+        photo.setImage(image);
+        photoRepository.save(photo);
+        player.setPhotoUpdatedAt(Instant.now());
+        return DtoMapper.toPlayerDto(player);
+    }
+
+    @Transactional
+    public PlayerDto deletePhoto(Long id) {
+        Player player = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Jugador " + id + " no encontrado"));
+        photoRepository.deleteById(id);
+        player.setPhotoUpdatedAt(null);
+        return DtoMapper.toPlayerDto(player);
+    }
+
+    /** The stored JPEG, or empty when the player has no picture. */
+    @Transactional(readOnly = true)
+    public Optional<byte[]> photo(Long id) {
+        return photoRepository.findById(id).map(PlayerPhoto::getImage);
     }
 
     /**
@@ -208,7 +251,7 @@ public class PlayerService {
         }
 
         PlayerStandingDto toDto() {
-            return new PlayerStandingDto(player.getId(), player.getName(),
+            return new PlayerStandingDto(player.getId(), player.getName(), DtoMapper.photoVersion(player),
                     points - penaltyPoints, championships, runnerUps, penaltyPoints);
         }
     }

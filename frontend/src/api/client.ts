@@ -43,6 +43,18 @@ export async function deletePlayer(id: number): Promise<void> {
   await api.delete(`/players/${id}`);
 }
 
+export async function uploadPlayerPhoto(id: number, image: Blob): Promise<Player> {
+  const body = new FormData();
+  body.append('file', image, 'photo.jpg');
+  const { data } = await api.post<Player>(`/players/${id}/photo`, body);
+  return data;
+}
+
+export async function deletePlayerPhoto(id: number): Promise<Player> {
+  const { data } = await api.delete<Player>(`/players/${id}/photo`);
+  return data;
+}
+
 export async function getPlayerStandings(): Promise<PlayerStanding[]> {
   const { data } = await api.get<PlayerStanding[]>('/players/standings');
   return data;

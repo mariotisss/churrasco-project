@@ -2,7 +2,13 @@
 // matches + standings, so anything "broadcast-y" (next fixture, form guide,
 // what to feature on the home page) is computed here from existing fields.
 
-import type { EditionDetail, EditionSummary, MatchDto, StandingRow } from '../api/types';
+import type {
+  EditionDetail,
+  EditionSummary,
+  MatchDto,
+  PlayerRef,
+  StandingRow,
+} from '../api/types';
 
 const LEG_ORDER: Record<string, number> = { IDA: 0, VUELTA: 1, SEMIFINAL: 2, FINAL: 3 };
 
@@ -128,6 +134,8 @@ export function palmares(editions: EditionSummary[]): EditionSummary[] {
 export interface TeamOdds {
   teamId: number;
   teamName: string;
+  /** The pair, so the crest can show their faces. */
+  players: [PlayerRef, PlayerRef];
   /** Probability of ending up in one of the places at stake, 0..1. */
   probability: number;
 }
@@ -310,6 +318,7 @@ export function qualificationOdds(detail: EditionDetail): OddsReport {
       .map((t, i) => ({
         teamId: t.id,
         teamName: t.name,
+        players: [t.player1, t.player2] as [PlayerRef, PlayerRef],
         probability: credit[i] / evaluated,
       }))
       .sort((a, b) => b.probability - a.probability || a.teamName.localeCompare(b.teamName)),
