@@ -148,7 +148,8 @@ public class PlayerService {
     }
 
     /**
-     * All-time player ranking. The whole roster appears (even players with no points yet).
+     * All-time player ranking. The whole roster appears (even players with no points yet),
+     * with how many editions each has played.
      * Every decided edition awards CHAMPION_POINTS to each player of the winning team and
      * RUNNER_UP_POINTS to each player of the runner-up (the Finalissima loser); manual
      * penalties are then subtracted. Sorted by net points, then titles, then name.
@@ -166,6 +167,15 @@ public class PlayerService {
             if (edition.isTest()) {
                 continue; // sandbox edition: never affects the all-time ranking
             }
+
+            // Editions played counts anyone who was drawn into a team, decided or not:
+            // the tournament you are in the middle of is one you are playing. Whoever sat
+            // one out is not counted for it — they were there, but they did not play.
+            for (Team team : teamRepository.findByEditionIdOrderByIdAsc(edition.getId())) {
+                countEdition(byPlayer, team.getPlayer1());
+                countEdition(byPlayer, team.getPlayer2());
+            }
+
             Long championTeamId = edition.getChampionTeamId();
             if (championTeamId == null) {
                 continue; // edition not decided yet
@@ -220,6 +230,13 @@ public class PlayerService {
         return null;
     }
 
+    private void countEdition(Map<Long, Accumulator> byPlayer, Player player) {
+        if (player == null) {
+            return;
+        }
+        byPlayer.computeIfAbsent(player.getId(), k -> new Accumulator(player)).editionsPlayed++;
+    }
+
     private void award(Map<Long, Accumulator> byPlayer, Team team, int points, boolean champion) {
         addPoints(byPlayer, team.getPlayer1(), points, champion);
         addPoints(byPlayer, team.getPlayer2(), points, champion);
@@ -242,6 +259,7 @@ public class PlayerService {
     private static final class Accumulator {
         private final Player player;
         private int points;
+        private int editionsPlayed;
         private int championships;
         private int runnerUps;
         private int penaltyPoints;
@@ -252,7 +270,7 @@ public class PlayerService {
 
         PlayerStandingDto toDto() {
             return new PlayerStandingDto(player.getId(), player.getName(), DtoMapper.photoVersion(player),
-                    points - penaltyPoints, championships, runnerUps, penaltyPoints);
+                    points - penaltyPoints, editionsPlayed, championships, runnerUps, penaltyPoints);
         }
     }
 }

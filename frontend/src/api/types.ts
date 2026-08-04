@@ -84,6 +84,8 @@ export interface PlayerStanding {
   name: string;
   photoVersion: number | null;
   points: number;
+  /** Non-test editions the player has been drawn into, decided or still under way. */
+  editionsPlayed: number;
   championships: number;
   runnerUps: number;
   penaltyPoints: number;

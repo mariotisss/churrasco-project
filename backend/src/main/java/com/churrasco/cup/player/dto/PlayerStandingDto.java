@@ -12,6 +12,8 @@ public record PlayerStandingDto(
         String name,
         Long photoVersion,
         int points,
+        /** Non-test editions the player was drawn into, decided or still under way. */
+        int editionsPlayed,
         int championships,
         int runnerUps,
         int penaltyPoints

@@ -48,6 +48,10 @@ export default function ClassificationPage() {
                 <tr className="border-b border-coal-700/70 text-left font-condensed text-[11px] font-bold uppercase tracking-wider text-zinc-500">
                   <th className="py-3 pl-4 pr-2">#</th>
                   <th className="px-2 py-3">Jugador</th>
+                  <th className="w-16 px-2 py-3 text-center" title="Ediciones disputadas">
+                    <span className="sm:hidden">Ed.</span>
+                    <span className="hidden sm:inline">Ediciones</span>
+                  </th>
                   <th className="hidden w-20 px-2 py-3 text-center sm:table-cell" title="Ediciones ganadas">
                     🏆 Títulos
                   </th>
@@ -91,6 +95,9 @@ function Row({ row, rank }: { row: PlayerStanding; rank: number }) {
           <PlayerAvatar player={{ id: row.playerId, name: row.name, photoVersion: row.photoVersion }} size="sm" />
           <span className="text-[15px] font-semibold text-zinc-100">{row.name}</span>
         </div>
+      </td>
+      <td className="px-2 py-3 text-center tabular-nums text-zinc-300">
+        {row.editionsPlayed > 0 ? row.editionsPlayed : <span className="text-zinc-600">—</span>}
       </td>
       <td className="hidden px-2 py-3 text-center tabular-nums text-zinc-300 sm:table-cell">
         {row.championships > 0 ? row.championships : <span className="text-zinc-600">—</span>}
