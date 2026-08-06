@@ -9,7 +9,8 @@ import {
 } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { Player } from '../api/types';
-import PlayerAvatar from '../components/PlayerAvatar';
+import PlayerAvatar, { photoUrl } from '../components/PlayerAvatar';
+import { usePhotoViewer } from '../components/PhotoViewer';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PhotoCropDialog from '../components/PhotoCropDialog';
 
@@ -119,6 +120,9 @@ function PlayerCard({ player }: { player: Player }) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [cropping, setCropping] = useState<File | null>(null);
+  // Here the avatar is the upload button, so seeing the picture full size is its own action.
+  const openPhoto = usePhotoViewer();
+  const photo = photoUrl(player);
 
   function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -165,7 +169,9 @@ function PlayerCard({ player }: { player: Player }) {
   return (
     <li className="panel p-4">
       <div className="flex items-center gap-3">
-        {/* The avatar is the upload control: click it to set or replace the picture. */}
+        {/* The avatar is the upload control: click it to set or replace the picture.
+            Looking at the picture is the "Ver foto" action below, so the click here
+            keeps its one meaning. */}
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
@@ -173,7 +179,7 @@ function PlayerCard({ player }: { player: Player }) {
           title={player.photoVersion === null ? 'Subir foto' : 'Cambiar foto'}
           className="group relative shrink-0 rounded-full ring-offset-2 ring-offset-coal-900 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ember-400"
         >
-          <PlayerAvatar player={player} size="lg" />
+          <PlayerAvatar player={player} size="lg" zoomable={false} />
           <span
             className={`absolute inset-0 grid place-items-center rounded-full bg-coal-950/70 font-condensed text-[10px] font-bold uppercase tracking-wide text-zinc-100 transition ${
               uploadPhoto.isPending ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
@@ -215,6 +221,11 @@ function PlayerCard({ player }: { player: Player }) {
         <button onClick={() => setEditing(true)} className="btn-ghost text-xs">
           Editar
         </button>
+        {player.photoVersion !== null && photo && (
+          <button onClick={() => openPhoto?.({ url: photo, name: player.name })} className="btn-ghost text-xs">
+            Ver foto
+          </button>
+        )}
         {player.photoVersion !== null && (
           <button
             onClick={() => deletePhoto.mutate(player.id)}

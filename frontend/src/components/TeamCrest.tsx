@@ -23,12 +23,15 @@ export default function TeamCrest({
   name,
   players,
   size = 'md',
+  zoomable = true,
 }: {
   /** Used for the fallback badge, and as the accessible label. */
   name: string;
   /** The team's two players. Omitted where only a name is known. */
   players?: [PlayerRef, PlayerRef];
   size?: AvatarSize;
+  /** Set to false where clicking a face must not steal the click (see PlayerAvatar). */
+  zoomable?: boolean;
 }) {
   if (!players) {
     return (
@@ -43,9 +46,16 @@ export default function TeamCrest({
   }
 
   return (
-    <span className="relative inline-flex shrink-0 items-center" aria-hidden>
-      <PlayerAvatar player={players[0]} size={size} className={`z-10 ${SEPARATOR}`} />
-      <PlayerAvatar player={players[1]} size={size} className={`${OVERLAP[size]} ${SEPARATOR}`} />
+    // Decorative as a whole, unless its faces can be opened — hiding the subtree would
+    // hide the buttons the avatars become.
+    <span className="relative inline-flex shrink-0 items-center" aria-hidden={zoomable ? undefined : true}>
+      <PlayerAvatar player={players[0]} size={size} zoomable={zoomable} className={`z-10 ${SEPARATOR}`} />
+      <PlayerAvatar
+        player={players[1]}
+        size={size}
+        zoomable={zoomable}
+        className={`${OVERLAP[size]} ${SEPARATOR}`}
+      />
     </span>
   );
 }

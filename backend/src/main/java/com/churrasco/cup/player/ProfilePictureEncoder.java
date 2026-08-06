@@ -26,8 +26,12 @@ import java.util.Iterator;
 @Component
 public class ProfilePictureEncoder {
 
-    /** Rendered at 64px at most in the UI; 256 keeps it crisp on high-density screens. */
-    private static final int SIDE = 256;
+    /**
+     * Circles are 64px at most in the UI, but any face can be opened full size in the
+     * photo viewer (~350px on a high-density screen), so 512 is what keeps that crisp.
+     * Pictures uploaded before this stay at their original 256: still fine, just softer.
+     */
+    private static final int SIDE = 512;
 
     private static final float QUALITY = 0.85f;
 

@@ -1,8 +1,13 @@
 // One person, as a circle: their profile picture when they have one, otherwise the
 // initials badge the app has always used. The colour is derived from the name, so a
 // player without a picture still keeps a stable identity across the site.
+//
+// A real picture is clickable: it opens full size in the app's photo viewer. Faces
+// drawn inside something else clickable (a card that links somewhere, the draw reveal)
+// pass zoomable={false} so the click keeps doing what the surrounding element does.
 
 import type { PlayerRef } from '../api/types';
+import { usePhotoViewer } from './PhotoViewer';
 
 const PALETTE = [
   'from-rose-500 to-rose-700',
@@ -54,17 +59,52 @@ export default function PlayerAvatar({
   player,
   size = 'md',
   className = '',
+  zoomable = true,
 }: {
   player: PlayerRef | { id: number; name: string; photoVersion: number | null };
   size?: AvatarSize;
   className?: string;
+  /** Set to false where clicking the face must not steal the click. */
+  zoomable?: boolean;
 }) {
   const url = photoUrl(player);
+  const openPhoto = usePhotoViewer();
   const base = `relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full font-condensed font-bold uppercase tracking-wide text-white shadow-md ring-1 ring-white/15 ${AVATAR_SIZES[size]} ${className}`;
 
   if (url) {
+    const zoom =
+      zoomable && openPhoto ? () => openPhoto({ url, name: player.name }) : null;
+    const label = `Ver la foto de ${player.name}`;
     return (
-      <span className={`${base} bg-coal-800`} aria-hidden>
+      <span
+        className={`${base} bg-coal-800 ${zoom ? 'cursor-zoom-in' : ''}`}
+        // Decorative unless it can be opened, in which case it is a control of its own.
+        aria-hidden={zoom ? undefined : true}
+        role={zoom ? 'button' : undefined}
+        tabIndex={zoom ? 0 : undefined}
+        aria-label={zoom ? label : undefined}
+        title={zoom ? label : undefined}
+        onClick={
+          zoom
+            ? (e) => {
+                // The face often sits inside a link or a row that does something else.
+                e.preventDefault();
+                e.stopPropagation();
+                zoom();
+              }
+            : undefined
+        }
+        onKeyDown={
+          zoom
+            ? (e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                e.preventDefault();
+                e.stopPropagation();
+                zoom();
+              }
+            : undefined
+        }
+      >
         <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
       </span>
     );

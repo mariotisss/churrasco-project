@@ -15,9 +15,12 @@ function usePlayer(name: string): PlayerRef {
   return byName.get(name) ?? { id: 0, name, photoVersion: null };
 }
 
-/** One person in the draw: their face if they have one, initials otherwise. */
+/**
+ * One person in the draw: their face if they have one, initials otherwise. Never
+ * zoomable — during the reveal a tap anywhere means "next", not "show me that photo".
+ */
 function DrawFace({ name, size }: { name: string; size: 'sm' | 'xl' }) {
-  return <PlayerAvatar player={usePlayer(name)} size={size} />;
+  return <PlayerAvatar player={usePlayer(name)} size={size} zoomable={false} />;
 }
 
 type Step =
@@ -295,7 +298,7 @@ function DrawnTeams({ teams }: { teams: TeamDto[] }) {
             key={team.id}
             className="animate-rise flex items-center gap-2 rounded-xl border border-coal-700/60 bg-coal-900/70 py-1.5 pl-1.5 pr-3"
           >
-            <TeamCrest name={team.name} players={[team.player1, team.player2]} size="sm" />
+            <TeamCrest name={team.name} players={[team.player1, team.player2]} size="sm" zoomable={false} />
             <span className="text-[13px] font-semibold text-zinc-200">{team.name}</span>
           </span>
         ))}
@@ -393,7 +396,7 @@ function TeamStep({
         <div className="mt-6 flex flex-col items-center">
           {beat === 'done' ? (
             <span className="animate-pop-in">
-              <TeamCrest name={team.name} players={[team.player1, team.player2]} size="xl" />
+              <TeamCrest name={team.name} players={[team.player1, team.player2]} size="xl" zoomable={false} />
             </span>
           ) : (
             <span className="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-coal-700 font-display text-2xl text-coal-600">
@@ -681,7 +684,7 @@ export default function DrawRevealOverlay({
                     className="animate-rise rounded-xl border border-coal-700/60 bg-coal-900/80 p-3"
                   >
                     <div className="mb-2.5 flex items-center gap-2.5">
-                      <TeamCrest name={team.name} players={[team.player1, team.player2]} size="md" />
+                      <TeamCrest name={team.name} players={[team.player1, team.player2]} size="md" zoomable={false} />
                       <p className="truncate text-[15px] font-semibold text-zinc-100">{team.name}</p>
                     </div>
                     <TeamLineup front={team.player1} back={team.player2} />

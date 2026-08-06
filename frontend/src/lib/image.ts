@@ -3,7 +3,7 @@
 // out and downscaled here: the upload stays small on the office wifi. The backend
 // re-encodes regardless — this is for speed, not for trust.
 
-/** Side of the uploaded square, in pixels. The server stores 256; this leaves margin. */
+/** Side of the uploaded square, in pixels — the same size the server stores. */
 const SIDE = 512;
 
 const QUALITY = 0.9;
