@@ -50,12 +50,13 @@ CREATE TABLE IF NOT EXISTS game (
     edition_id     INTEGER NOT NULL REFERENCES edition(id) ON DELETE CASCADE,
     home_team_id   INTEGER NOT NULL REFERENCES team(id) ON DELETE CASCADE,
     away_team_id   INTEGER NOT NULL REFERENCES team(id) ON DELETE CASCADE,
-    leg            TEXT    NOT NULL,           -- IDA | VUELTA | CRUCE | SEMIFINAL | FINAL
+    -- IDA | VUELTA | LLAVE_ALTA | LLAVE_BAJA | SEMIFINAL | FINAL (plus the retired CRUCE)
+    leg            TEXT    NOT NULL,
     order_index    INTEGER NOT NULL,
     home_score     INTEGER,
     away_score     INTEGER,
     status         TEXT    NOT NULL DEFAULT 'PENDING',  -- PENDING | PLAYED
-    -- 1 = playoff match (cruce, semifinal or Finalissima): never counts for the league table.
+    -- 1 = playoff match (a bracket round or the Finalissima): never counts for the table.
     -- Historical name: the Finalissima used to be the only playoff match.
     is_finalissima INTEGER NOT NULL DEFAULT 0,
     -- Side of the table picked by the home team of a playoff match: ROJIBLANCO | AZUL.

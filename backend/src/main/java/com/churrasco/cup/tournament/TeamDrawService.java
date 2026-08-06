@@ -74,10 +74,10 @@ public class TeamDrawService {
         // A una vuelta la liga es corta, así que se decide con eliminatorias: sin 4 equipos
         // no hay cuadro que jugar (con impares uno se queda fuera, de ahí el redondeo).
         int teamCount = participants.size() / 2;
-        if (!roundTrip && teamCount < PlayoffService.MIN_TEAMS_FOR_LADDER) {
+        if (!roundTrip && teamCount < PlayoffService.MIN_TEAMS_FOR_BRACKET) {
             throw new BadRequestException("El formato a una vuelta necesita al menos "
-                    + (PlayoffService.MIN_TEAMS_FOR_LADDER * 2) + " jugadores ("
-                    + PlayoffService.MIN_TEAMS_FOR_LADDER + " equipos) para jugar las eliminatorias");
+                    + (PlayoffService.MIN_TEAMS_FOR_BRACKET * 2) + " jugadores ("
+                    + PlayoffService.MIN_TEAMS_FOR_BRACKET + " equipos) para jugar las eliminatorias");
         }
 
         // Pairs to avoid, read before the previous draw of this edition is wiped.

@@ -11,21 +11,35 @@ import type {
   StandingRow,
 } from '../api/types';
 
-const LEG_ORDER: Record<string, number> = { IDA: 0, VUELTA: 1, CRUCE: 2, SEMIFINAL: 3, FINAL: 4 };
+const LEG_ORDER: Record<string, number> = {
+  IDA: 0,
+  VUELTA: 1,
+  LLAVE_ALTA: 2,
+  LLAVE_BAJA: 3,
+  CRUCE: 3,
+  SEMIFINAL: 4,
+  FINAL: 5,
+};
 
-/** Teams that reach the playoff ladder in the single-round format. */
-const LADDER_SPOTS = 4;
+/** Teams that reach the bracket in the single-round format. */
+const BRACKET_SPOTS = 4;
 
-/** The ladder's rungs before the Finalissima, bottom to top. */
-export const LADDER_LEGS: Leg[] = ['CRUCE', 'SEMIFINAL'];
+/**
+ * The bracket's columns before the Finalissima, in play order. Both llaves are played at
+ * the same time, so they share the first one; CRUCE rides along with them because that is
+ * where the retired ladder's opening match belongs.
+ */
+export const BRACKET_COLUMNS: Leg[][] = [['LLAVE_ALTA', 'LLAVE_BAJA', 'CRUCE'], ['SEMIFINAL']];
 
 /** Broadcast label for each phase. */
 export const LEG_LABELS: Record<Leg, string> = {
   IDA: 'Ida',
   VUELTA: 'Vuelta',
-  CRUCE: 'Cruce 4º–3º',
+  LLAVE_ALTA: 'Llave alta · 1º-2º',
+  LLAVE_BAJA: 'Llave baja · 4º-3º',
   SEMIFINAL: 'Semifinal',
   FINAL: 'Finalissima',
+  CRUCE: 'Cruce 4º–3º',
 };
 
 /** League matches only (everything except the knockout rounds and the Finalissima). */
@@ -34,23 +48,24 @@ export function leagueMatches(matches: MatchDto[]): MatchDto[] {
 }
 
 /**
- * Whether this edition's league is followed by the playoff ladder (the 4º plays the 3º,
- * the winner the 2º and the survivor the 1º). Only the single-round format uses it, and
- * only with enough teams to fill it — the same rule the backend enforces when drawing.
+ * Whether this edition's league is followed by the bracket (1º-2º and 4º-3º, the loser of
+ * the first one dropping into a semifinal against the winner of the second). Only the
+ * single-round format uses it, and only with enough teams to fill it — the same rule the
+ * backend enforces when drawing.
  */
-export function hasLadder(detail: EditionDetail): boolean {
-  return !detail.roundTrip && detail.teams.length >= LADDER_SPOTS;
+export function hasBracket(detail: EditionDetail): boolean {
+  return !detail.roundTrip && detail.teams.length >= BRACKET_SPOTS;
 }
 
-/** How many teams the league qualifies: the top 4 (ladder) or the top 2 (direct final). */
+/** How many teams the league qualifies: the top 4 (bracket) or the top 2 (direct final). */
 export function playoffSpots(detail: EditionDetail): number {
-  return hasLadder(detail) ? LADDER_SPOTS : 2;
+  return hasBracket(detail) ? BRACKET_SPOTS : 2;
 }
 
 /**
  * The places the league is actually racing for. Normally the playoff spots, but when
- * every team qualifies (4 teams, 4 ladder places) nobody is fighting to get in: what's
- * at stake is finishing 1st, which enters last, at home, and chooses the side.
+ * every team qualifies (4 teams, 4 bracket places) nobody is fighting to get in: what's
+ * at stake is finishing 1st, which picks the side of the table.
  */
 export function oddsSpots(detail: EditionDetail): number {
   const spots = playoffSpots(detail);
@@ -132,7 +147,7 @@ export function palmares(editions: EditionSummary[]): EditionSummary[] {
 }
 
 // ---- Qualification odds ----------------------------------------------------
-// The league qualifies its top teams for the playoffs (top 4 to the ladder, or
+// The league qualifies its top teams for the playoffs (top 4 to the bracket, or
 // top 2 straight to the Finalissima) — or, when everyone is already in, it is the top
 // seed that's at stake. Nothing can end in a draw (the backend rejects it), so every
 // pending fixture has exactly two outcomes and the rest of the league is a finite set

@@ -20,16 +20,17 @@ import java.util.Set;
  * Two shapes, decided by the league format:
  * <ul>
  *   <li><b>Ida y vuelta</b>: the top 2 go straight to the Finalissima.</li>
- *   <li><b>Partido único</b> (needs at least {@value #MIN_TEAMS_FOR_LADDER} teams): a ladder
- *       instead of a bracket. The 4th plays the 3rd (the <i>cruce</i>), the winner plays the
- *       2nd (the semifinal) and whoever survives plays the 1st in the Finalissima. Finishing
- *       higher up the table is worth more: you enter later and always at home.</li>
+ *   <li><b>Partido único</b> (needs at least {@value #MIN_TEAMS_FOR_BRACKET} teams): the top 4
+ *       play a double-chance bracket — the <i>llave alta</i> (1st vs 2nd) and the <i>llave
+ *       baja</i> (4th at the 3rd) open it; whoever loses the alta drops into the semifinal
+ *       against whoever wins the baja, and that survivor meets the alta's winner in the
+ *       Finalissima. Finishing in the top 2 buys a second life: you can lose once and still
+ *       be champion, while the 3rd and the 4th are out the moment they lose.</li>
  * </ul>
  *
  * In every playoff match the better-classified team is the home team, which is the one
- * that gets to pick the side of the table (see {@link Match#chooseSide}). On the ladder
- * that is always the team waiting at the top of the rung, since it never faces anyone
- * who finished above it.
+ * that gets to pick the side of the table (see {@link Match#chooseSide}) — the only thing
+ * winning the league is worth once the bracket starts.
  *
  * This runs after any result is recorded, edited or cleared, so the bracket always
  * reflects the current standings:
@@ -38,7 +39,7 @@ import java.util.Set;
  *   <li>a match whose pairing no longer matches the qualified teams is re-seeded,
  *       discarding its result — a result edit can never leave a champion who didn't
  *       actually reach the final;</li>
- *   <li>a rung whose challenger is still unknown (because the rung below it is not
+ *   <li>a round whose contenders are still unknown (because the round feeding it is not
  *       played) is dropped, and recreated as soon as it is decided again;</li>
  *   <li>a pairing that still holds is left untouched, so correcting an unrelated result
  *       never disturbs an already-played match.</li>
@@ -47,8 +48,8 @@ import java.util.Set;
 @Service
 public class PlayoffService {
 
-    /** Below this, the single-round format has no room for the playoff ladder. */
-    public static final int MIN_TEAMS_FOR_LADDER = 4;
+    /** Below this, the single-round format has no room for the bracket. */
+    public static final int MIN_TEAMS_FOR_BRACKET = 4;
 
     private final MatchRepository matchRepository;
     private final TeamRepository teamRepository;
@@ -62,9 +63,9 @@ public class PlayoffService {
         this.standingsCalculator = standingsCalculator;
     }
 
-    /** True when this edition's format sends the top 4 up the playoff ladder. */
-    public static boolean hasLadder(boolean roundTrip, int teamCount) {
-        return !roundTrip && teamCount >= MIN_TEAMS_FOR_LADDER;
+    /** True when this edition's format sends the top 4 into the bracket. */
+    public static boolean hasBracket(boolean roundTrip, int teamCount) {
+        return !roundTrip && teamCount >= MIN_TEAMS_FOR_BRACKET;
     }
 
     /** Rebuilds/repairs the playoff matches of an edition after any result change. */
@@ -72,8 +73,11 @@ public class PlayoffService {
         Long editionId = edition.getId();
         List<Match> all = matchRepository.findByEditionIdOrderByOrderIndexAsc(editionId);
         List<Match> league = all.stream().filter(m -> !m.isPlayoff()).toList();
-        List<Match> cruces = matchesOf(all, Leg.CRUCE);
+        List<Match> altas = matchesOf(all, Leg.LLAVE_ALTA);
+        List<Match> bajas = matchesOf(all, Leg.LLAVE_BAJA);
         List<Match> semifinals = matchesOf(all, Leg.SEMIFINAL);
+        // Editions drawn while the ladder format was in place; nothing generates these now.
+        List<Match> legacy = matchesOf(all, Leg.CRUCE);
         Match finalissima = all.stream().filter(Match::isFinal).findFirst().orElse(null);
 
         boolean leagueComplete = !league.isEmpty()
@@ -81,7 +85,9 @@ public class PlayoffService {
         if (!leagueComplete) {
             // The league is not decided (yet, or any more): the whole playoff phase is
             // premature, so it goes away along with any champion it had crowned.
-            dropAll(edition, cruces);
+            dropAll(edition, legacy);
+            dropAll(edition, altas);
+            dropAll(edition, bajas);
             dropAll(edition, semifinals);
             drop(edition, finalissima);
             return;
@@ -93,38 +99,52 @@ public class PlayoffService {
             return;
         }
         int nextOrder = league.stream().mapToInt(Match::getOrderIndex).max().orElse(-1) + 1;
+        dropAll(edition, legacy);
 
-        if (!hasLadder(edition.isRoundTrip(), teams.size())) {
-            // e.g. the edition was re-drawn as ida y vuelta: the ladder no longer applies.
-            dropAll(edition, cruces);
+        if (!hasBracket(edition.isRoundTrip(), teams.size())) {
+            // e.g. the edition was re-drawn as ida y vuelta: the bracket no longer applies.
+            dropAll(edition, altas);
+            dropAll(edition, bajas);
             dropAll(edition, semifinals);
             ensure(edition, finalissima, seed(teams, standings, 0), seed(teams, standings, 1),
                     Leg.FINAL, nextOrder);
             return;
         }
 
-        // Rung 1: the 3rd hosts the 4th.
-        Match cruce = ensure(edition, first(cruces),
-                seed(teams, standings, 2), seed(teams, standings, 3), Leg.CRUCE, nextOrder);
-        dropAll(edition, rest(cruces)); // leftovers from another format
-        if (cruce.getStatus() != MatchStatus.PLAYED) {
-            dropAll(edition, semifinals); // the 2nd's challenger is still unknown
+        // Opening round, both halves at once: the 1st hosts the 2nd, the 3rd hosts the 4th.
+        Match alta = ensure(edition, first(altas),
+                seed(teams, standings, 0), seed(teams, standings, 1), Leg.LLAVE_ALTA, nextOrder);
+        dropAll(edition, rest(altas));
+        Match baja = ensure(edition, first(bajas),
+                seed(teams, standings, 2), seed(teams, standings, 3), Leg.LLAVE_BAJA, nextOrder + 1);
+        dropAll(edition, rest(bajas));
+
+        if (alta.getStatus() != MatchStatus.PLAYED || baja.getStatus() != MatchStatus.PLAYED) {
+            dropAll(edition, semifinals); // nobody has dropped down or come up yet
             drop(edition, finalissima);
             return;
         }
 
-        // Rung 2: the 2nd hosts whoever came up from the cruce.
+        // Second chance: the one who lost upstairs against the one who survived downstairs.
+        // The former is the 1st or the 2nd and the latter the 3rd or the 4th, so the drop-down
+        // is always the better classified of the two, and the one who picks the side.
         Match semifinal = ensure(edition, first(semifinals),
-                seed(teams, standings, 1), winnerOf(cruce), Leg.SEMIFINAL, nextOrder + 1);
+                loserOf(alta), winnerOf(baja), Leg.SEMIFINAL, nextOrder + 2);
         dropAll(edition, rest(semifinals));
         if (semifinal.getStatus() != MatchStatus.PLAYED) {
-            drop(edition, finalissima); // the 1st's challenger is still unknown
+            drop(edition, finalissima); // the second finalist is still unknown
             return;
         }
 
-        // Rung 3: the 1st hosts the survivor. The Finalissima.
+        // The Finalissima. It can be a rematch of the llave alta, when whoever lost it comes
+        // all the way back; the better-classified finalist plays at home either way.
+        Team fromAlta = winnerOf(alta);
+        Team fromSemifinal = winnerOf(semifinal);
+        boolean altaIsBetter = position(standings, fromAlta) < position(standings, fromSemifinal);
         ensure(edition, finalissima,
-                seed(teams, standings, 0), winnerOf(semifinal), Leg.FINAL, nextOrder + 2);
+                altaIsBetter ? fromAlta : fromSemifinal,
+                altaIsBetter ? fromSemifinal : fromAlta,
+                Leg.FINAL, nextOrder + 3);
     }
 
     /**
@@ -201,7 +221,20 @@ public class PlayoffService {
                 .orElseThrow(() -> new IllegalStateException("Equipo " + teamId + " no encontrado en la edicion"));
     }
 
+    private int position(List<StandingRowDto> standings, Team team) {
+        for (int i = 0; i < standings.size(); i++) {
+            if (standings.get(i).teamId().equals(team.getId())) {
+                return i;
+            }
+        }
+        return Integer.MAX_VALUE;
+    }
+
     private Team winnerOf(Match match) {
         return match.getHomeScore() > match.getAwayScore() ? match.getHomeTeam() : match.getAwayTeam();
+    }
+
+    private Team loserOf(Match match) {
+        return match.getHomeScore() > match.getAwayScore() ? match.getAwayTeam() : match.getHomeTeam();
     }
 }

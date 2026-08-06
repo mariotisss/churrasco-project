@@ -5,9 +5,11 @@ players sign up, get drawn into **2-player teams** and play a league, which is t
 **Finalissima**. Two formats:
 
 - **Ida y vuelta** (double round-robin): the **top 2** go straight to the Finalissima.
-- **Partido único** (single round-robin, needs 4 teams): the league feeds a **ladder** — the 4th
-  plays the 3rd, the winner plays the 2nd, and whoever survives plays the 1st in the Finalissima.
-  Finishing higher is worth more: you enter later and always at home (the home team picks the side).
+- **Partido único** (single round-robin, needs 4 teams): the top 4 play a **double-chance
+  bracket** — *llave alta* (1st vs 2nd) and *llave baja* (4th at the 3rd); whoever loses the alta
+  drops into a semifinal against whoever wins the baja, and that survivor meets the alta's winner
+  in the Finalissima. The top 2 can lose once and still win it; the 3rd and 4th are out the moment
+  they lose. The better-classified team is always at home, and the home team picks the side.
 
 - **Player** management (add/edit; soft delete to keep history).
 - **Team draw** per edition (if the number of players is odd, one sits out at random; pairs from
@@ -86,9 +88,9 @@ cd backend
 | PUT    | `/api/matches/{id}/result`    | Record a result (`{ homeScore, awayScore }`) |
 
 When the last league match is recorded the playoff phase is created automatically: the **Finalissima**
-between the 1st and 2nd (ida y vuelta), or the first rung of the ladder, each following round appearing
-as the one below it is played (partido único). Recording the Finalissima sets the **champion** and moves
-the edition to `FINISHED`.
+between the 1st and 2nd (ida y vuelta), or the two llaves that open the bracket, with each following
+round appearing as soon as the one feeding it is played (partido único). Recording the Finalissima sets
+the **champion** and moves the edition to `FINISHED`.
 
 A re-draw only re-shuffles the players of the edition's original draw, and it is blocked once any
 result has been recorded.

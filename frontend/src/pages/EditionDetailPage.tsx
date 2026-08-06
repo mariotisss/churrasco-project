@@ -191,8 +191,8 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
   const next = nextPendingMatch(edition.matches);
   const fin = edition.finalissima;
   const finalPending = fin && fin.status !== 'PLAYED';
-  // Once the league is over the ladder is what's next, and it needs its scores. Each rung
-  // only shows up when the one below it has been played, so at most one is ever pending.
+  // Once the league is over the bracket is what's next, and it needs its scores. A round
+  // only shows up when the one feeding it has been played.
   const playoffsPending = edition.playoffs.some((m) => m.status !== 'PLAYED');
 
   if (!next && !playoffsPending && !finalPending) return null;
@@ -238,8 +238,8 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
         <div>
           <h2 className="lower-third mb-3">Eliminatorias</h2>
           <p className="mb-3 font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-            El 4º visita al 3º, el ganador al 2º y el que sobreviva al 1º · el mejor clasificado
-            elige lado
+            1º–2º arriba y 4º–3º abajo · quien pierde arriba se juega la vida contra quien gana
+            abajo · el mejor clasificado elige lado
           </p>
           <div className="space-y-4">
             {edition.playoffs.map((match) => (

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { EditionDetail } from '../api/types';
-import { hasLadder, oddsSpots, qualificationOdds } from '../lib/tournament';
+import { hasBracket, oddsSpots, qualificationOdds } from '../lib/tournament';
 import TeamCrest from './TeamCrest';
 
 /** Human-friendly percentage: keeps the extremes honest (<1% / >99%). */
@@ -41,23 +41,23 @@ export default function QualificationOdds({ detail }: { detail: EditionDetail })
   if (odds.length === 0) return null;
 
   const spots = oddsSpots(detail);
-  const ladder = hasLadder(detail);
+  const bracket = hasBracket(detail);
   const max = Math.max(...odds.map((o) => o.probability), 0.0001);
 
-  // With everyone already in the playoffs the race is for the top seed: the 1st picks
-  // the side of the table (and, on the ladder, waits for the final at home).
+  // With everyone already in the playoffs the race is for the top seed, which is worth
+  // the side of the table in the first match of the bracket.
   const seedRace = spots === 1;
   const combinations = formatCombinations(report.combinations);
   const matchesLeft =
     report.pendingMatches === 1 ? 'el partido que queda' : `los ${report.pendingMatches} partidos que quedan`;
   const title = seedRace
     ? 'Opciones de acabar 1º'
-    : ladder
+    : bracket
       ? 'Opciones de eliminatorias'
       : 'Opciones de Finalissima';
   const subtitle = seedRace
-    ? ladder
-      ? 'Probabilidad de ganar la liga y esperar en la Finalissima'
+    ? bracket
+      ? 'Probabilidad de ganar la liga y elegir lado en la llave alta'
       : 'Probabilidad de ganar la liga y elegir lado en la Finalissima'
     : `Probabilidad de acabar entre los ${spots} primeros`;
 

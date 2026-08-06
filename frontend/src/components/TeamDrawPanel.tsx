@@ -51,8 +51,8 @@ export default function TeamDrawPanel({
   const drawnCount = edition.teams.length * 2 + (edition.satOutPlayer ? 1 : 0);
   const participantCount = hasTeams ? drawnCount : (selected?.length ?? 0);
   const canDraw = participantCount >= 4;
-  // A una vuelta la liga es demasiado corta para decidir nada, así que se remata con
-  // eliminatorias: hacen falta 4 equipos, o sea 8 jugadores (con impar uno se queda fuera).
+  // A una vuelta la liga es demasiado corta para decidir nada, así que se remata con un
+  // cuadro de 4 equipos, o sea 8 jugadores (con impar uno se queda fuera).
   const canSingleRound = Math.floor(participantCount / 2) >= 4;
 
   // Si la selección se queda corta, el partido único deja de estar disponible.
@@ -150,7 +150,7 @@ export default function TeamDrawPanel({
               disabled={!canSingleRound}
               onClick={() => setRoundTrip(false)}
               title="Partido único"
-              subtitle="Cada pareja se enfrenta una vez · eliminatorias en escalera"
+              subtitle="Cada pareja se enfrenta una vez · cuadro de 4 y final"
             />
           </div>
           {!canSingleRound && (

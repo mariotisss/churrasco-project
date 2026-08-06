@@ -30,7 +30,8 @@ export interface TeamDto {
   player2: Player;
 }
 
-export type Leg = 'IDA' | 'VUELTA' | 'CRUCE' | 'SEMIFINAL' | 'FINAL';
+/** CRUCE is retired (the old ladder); it only turns up in editions drawn back then. */
+export type Leg = 'IDA' | 'VUELTA' | 'LLAVE_ALTA' | 'LLAVE_BAJA' | 'SEMIFINAL' | 'FINAL' | 'CRUCE';
 export type MatchStatus = 'PENDING' | 'PLAYED';
 
 /** The two sides of the futbolín table. */
@@ -114,9 +115,10 @@ export interface EditionDetail {
   standings: StandingRow[];
   matches: MatchDto[];
   /**
-   * Knockout rounds before the Finalissima, in play order: the cruce (4º at the 3º) and
-   * the semifinal against the 2º. Only in the single-round format, and each one only
-   * once the round below it has been played.
+   * Knockout rounds before the Finalissima, in play order: the llave alta (1º-2º), the
+   * llave baja (4º at the 3º) and the semifinal that the loser of the alta plays against
+   * the winner of the baja. Only in the single-round format, and the semifinal only once
+   * both llaves have been played.
    */
   playoffs: MatchDto[];
   finalissima: MatchDto | null;

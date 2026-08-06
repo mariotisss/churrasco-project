@@ -33,7 +33,7 @@ export default function StandingsTable({
 }: {
   rows: StandingRow[];
   form?: Map<number, FormResult[]>;
-  /** How many places qualify for the playoffs: 4 (the ladder) or 2 (direct final). */
+  /** How many places qualify for the playoffs: 4 (the bracket) or 2 (direct final). */
   qualifyingSpots?: number;
 }) {
   if (rows.length === 0) {

@@ -128,7 +128,7 @@ class TournamentFlowIntegrationTest {
     }
 
     @Test
-    void singleRoundNeedsFourTeamsForThePlayoffLadder() {
+    void singleRoundNeedsFourTeamsForTheBracket() {
         List<Long> playerIds = createPlayers("Tim", "Uma", "Val", "Wes", "Xan", "Yal");
 
         EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Corta Cup", false));
@@ -142,57 +142,85 @@ class TournamentFlowIntegrationTest {
     }
 
     /**
-     * Full single-round flow: the league feeds a ladder where the 4th visits the 3rd, the
-     * winner visits the 2nd and the survivor plays the 1st in the Finalissima. Each rung
-     * only appears once the one below it is decided, and the better-classified team is
-     * always the one at home (the one that picks the side of the table).
+     * Full single-round flow: the league opens a bracket with the llave alta (1º-2º) and the
+     * llave baja (4º at the 3º); whoever loses the alta drops into the semifinal against
+     * whoever wins the baja, and that survivor plays the alta's winner in the Finalissima.
+     * The better-classified team is always the one at home (the one that picks the side).
      */
     @Test
-    void singleRoundLeagueIsFollowedByTheLadderAndTheFinal() {
+    void singleRoundLeagueIsFollowedByTheBracketAndTheFinal() {
         List<Long> ids = createPlayers("S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8");
         EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Semis Cup", false));
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, false));
         assertEquals(4, detail.teams().size());
 
         EditionDetailDto afterLeague = recordSingleRoundLeague(edition.id(), detail.teams());
-        assertEquals(1, afterLeague.playoffs().size(), "La liga solo define el cruce 4º-3º");
-        assertNull(afterLeague.finalissima(), "La final no existe hasta que se sube la escalera");
+        assertEquals(2, afterLeague.playoffs().size(), "La liga abre las dos llaves");
+        assertNull(afterLeague.finalissima(), "La final no existe hasta que se resuelve el cuadro");
 
         List<StandingRowDto> table = afterLeague.standings();
-        MatchDto cruce = afterLeague.playoffs().get(0);
-        assertEquals("CRUCE", cruce.leg());
-        assertEquals(table.get(2).teamId(), cruce.homeTeam().id(), "3º en casa contra el 4º");
-        assertEquals(table.get(3).teamId(), cruce.awayTeam().id());
+        MatchDto alta = afterLeague.playoffs().get(0);
+        MatchDto baja = afterLeague.playoffs().get(1);
+        assertEquals("LLAVE_ALTA", alta.leg());
+        assertEquals(table.get(0).teamId(), alta.homeTeam().id(), "1º en casa contra el 2º");
+        assertEquals(table.get(1).teamId(), alta.awayTeam().id());
+        assertEquals("LLAVE_BAJA", baja.leg());
+        assertEquals(table.get(2).teamId(), baja.homeTeam().id(), "3º en casa contra el 4º");
+        assertEquals(table.get(3).teamId(), baja.awayTeam().id());
 
-        // The 3rd picks its side; the 4th gets the other one.
+        // The 1st picks its side; the 2nd gets the other one.
         EditionDetailDto withSide =
-                matchService.chooseSide(cruce.id(), new SideChoiceRequest(Side.AZUL));
+                matchService.chooseSide(alta.id(), new SideChoiceRequest(Side.AZUL));
         assertEquals("AZUL", withSide.playoffs().get(0).chosenSide());
 
-        // The 3rd wins the cruce -> it goes on to visit the 2nd.
-        EditionDetailDto afterCruce =
-                matchService.recordResult(cruce.id(), new MatchResultRequest(5, 2));
-        assertEquals(2, afterCruce.playoffs().size(), "El cruce jugado define la semifinal");
-        assertNull(afterCruce.finalissima(), "La final espera a la semifinal");
-        MatchDto semifinal = afterCruce.playoffs().get(1);
+        // The 2nd loses the alta and the 4th wins the baja: neither is out yet.
+        matchService.recordResult(alta.id(), new MatchResultRequest(5, 2));
+        EditionDetailDto afterLlaves =
+                matchService.recordResult(baja.id(), new MatchResultRequest(1, 4));
+        assertEquals(3, afterLlaves.playoffs().size(), "Las dos llaves jugadas definen la semifinal");
+        assertNull(afterLlaves.finalissima(), "La final espera a la semifinal");
+        MatchDto semifinal = afterLlaves.playoffs().get(2);
         assertEquals("SEMIFINAL", semifinal.leg());
-        assertEquals(table.get(1).teamId(), semifinal.homeTeam().id(), "2º en casa contra el ganador");
-        assertEquals(table.get(2).teamId(), semifinal.awayTeam().id());
+        assertEquals(table.get(1).teamId(), semifinal.homeTeam().id(),
+                "El que baja de la alta es el mejor clasificado de los dos");
+        assertEquals(table.get(3).teamId(), semifinal.awayTeam().id());
 
-        // The 3rd wins again (as the visitor) -> it is the one to play the 1st.
+        // The 2nd survives the semifinal, so the final is a rematch of the llave alta.
         EditionDetailDto afterSemi =
-                matchService.recordResult(semifinal.id(), new MatchResultRequest(1, 4));
+                matchService.recordResult(semifinal.id(), new MatchResultRequest(6, 3));
         MatchDto finalissima = afterSemi.finalissima();
         assertNotNull(finalissima, "La semifinal jugada debe generar la final");
         assertEquals(table.get(0).teamId(), finalissima.homeTeam().id(),
-                "El 1º espera en la final, juega en casa y elige lado");
-        assertEquals(table.get(2).teamId(), finalissima.awayTeam().id());
+                "El mejor clasificado de los dos finalistas juega en casa y elige lado");
+        assertEquals(table.get(1).teamId(), finalissima.awayTeam().id());
         assertNull(finalissima.chosenSide(), "La final empieza sin lado elegido");
 
         EditionDetailDto finished =
                 matchService.recordResult(finalissima.id(), new MatchResultRequest(7, 3));
         assertEquals("FINISHED", finished.status());
         assertEquals(table.get(0).teamId(), finished.champion().id());
+    }
+
+    /** Losing the llave alta is not fatal: the 2nd can still take the title through the semifinal. */
+    @Test
+    void theSecondChanceCanWinTheEdition() {
+        List<Long> ids = createPlayers("R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8");
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Repesca Cup", false));
+        EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, false));
+
+        EditionDetailDto afterLeague = recordSingleRoundLeague(edition.id(), detail.teams());
+        List<StandingRowDto> table = afterLeague.standings();
+        matchService.recordResult(afterLeague.playoffs().get(0).id(), new MatchResultRequest(5, 2));
+        EditionDetailDto afterLlaves =
+                matchService.recordResult(afterLeague.playoffs().get(1).id(), new MatchResultRequest(5, 1));
+        EditionDetailDto afterSemi = matchService.recordResult(
+                afterLlaves.playoffs().get(2).id(), new MatchResultRequest(5, 3));
+
+        // The 2nd (beaten in the alta) wins the semifinal and then the final, away.
+        EditionDetailDto finished = matchService.recordResult(
+                afterSemi.finalissima().id(), new MatchResultRequest(2, 6));
+        assertEquals(table.get(1).teamId(), finished.champion().id(),
+                "Perder la llave alta no elimina: el 2º puede ser campeón");
     }
 
     @Test
@@ -202,31 +230,35 @@ class TournamentFlowIntegrationTest {
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, false));
 
         EditionDetailDto afterLeague = recordSingleRoundLeague(edition.id(), detail.teams());
-        Long cruceId = afterLeague.playoffs().get(0).id();
-        EditionDetailDto afterCruce = matchService.recordResult(cruceId, new MatchResultRequest(5, 2));
-        Long semifinalId = afterCruce.playoffs().get(1).id();
+        matchService.recordResult(afterLeague.playoffs().get(0).id(), new MatchResultRequest(5, 2));
+        EditionDetailDto afterLlaves =
+                matchService.recordResult(afterLeague.playoffs().get(1).id(), new MatchResultRequest(5, 2));
+        Long semifinalId = afterLlaves.playoffs().get(2).id();
         EditionDetailDto afterSemi = matchService.recordResult(semifinalId, new MatchResultRequest(5, 2));
         assertNotNull(afterSemi.finalissima());
 
         EditionDetailDto cleared = matchService.clearResult(semifinalId);
-        assertNull(cleared.finalissima(), "Sin semifinal jugada no se conoce al rival del 1º");
-        assertEquals(2, cleared.playoffs().size(), "El cruce y la semifinal siguen en pie");
+        assertNull(cleared.finalissima(), "Sin semifinal jugada no se conoce al segundo finalista");
+        assertEquals(3, cleared.playoffs().size(), "Las llaves y la semifinal siguen en pie");
     }
 
     @Test
-    void clearingTheCruceRemovesTheRestOfTheLadder() {
+    void clearingALlaveRemovesTheRestOfTheBracket() {
         List<Long> ids = createPlayers("E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8");
-        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Cruce Clear", false));
+        EditionSummaryDto edition = editionService.create(new CreateEditionRequest("Llave Clear", false));
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, false));
 
         EditionDetailDto afterLeague = recordSingleRoundLeague(edition.id(), detail.teams());
-        Long cruceId = afterLeague.playoffs().get(0).id();
-        EditionDetailDto afterCruce = matchService.recordResult(cruceId, new MatchResultRequest(5, 2));
-        matchService.recordResult(afterCruce.playoffs().get(1).id(), new MatchResultRequest(5, 2));
+        Long altaId = afterLeague.playoffs().get(0).id();
+        matchService.recordResult(altaId, new MatchResultRequest(5, 2));
+        EditionDetailDto afterLlaves =
+                matchService.recordResult(afterLeague.playoffs().get(1).id(), new MatchResultRequest(5, 2));
+        matchService.recordResult(afterLlaves.playoffs().get(2).id(), new MatchResultRequest(5, 2));
 
-        EditionDetailDto cleared = matchService.clearResult(cruceId);
-        assertEquals(1, cleared.playoffs().size(), "Sin cruce jugado la semifinal no existe");
-        assertEquals("CRUCE", cleared.playoffs().get(0).leg());
+        EditionDetailDto cleared = matchService.clearResult(altaId);
+        assertEquals(2, cleared.playoffs().size(), "Sin la llave alta jugada la semifinal no existe");
+        assertEquals("LLAVE_ALTA", cleared.playoffs().get(0).leg());
+        assertEquals("LLAVE_BAJA", cleared.playoffs().get(1).leg());
         assertNull(cleared.finalissima());
     }
 
@@ -237,7 +269,7 @@ class TournamentFlowIntegrationTest {
         EditionDetailDto detail = editionService.draw(edition.id(), new DrawRequest(ids, false));
 
         EditionDetailDto afterLeague = recordSingleRoundLeague(edition.id(), detail.teams());
-        assertEquals(1, afterLeague.playoffs().size());
+        assertEquals(2, afterLeague.playoffs().size());
 
         MatchDto anyLeagueMatch = afterLeague.matches().stream()
                 .filter(m -> !m.playoff()).findFirst().orElseThrow();

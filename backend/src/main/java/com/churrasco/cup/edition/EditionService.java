@@ -68,7 +68,7 @@ public class EditionService {
         List<StandingRowDto> standings = standingsCalculator.compute(teams, leagueMatches);
         List<TeamDto> teamDtos = teams.stream().map(DtoMapper::toTeamDto).toList();
         List<MatchDto> matchDtos = matches.stream().map(DtoMapper::toMatchDto).toList();
-        // Every playoff round before the Finalissima, in play order (the ladder's rungs).
+        // Every playoff round before the Finalissima, in play order (the bracket's rounds).
         List<MatchDto> playoffs = matches.stream()
                 .filter(m -> m.isPlayoff() && !m.isFinal())
                 .map(DtoMapper::toMatchDto)
