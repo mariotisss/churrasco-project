@@ -6,8 +6,8 @@ players sign up, get drawn into **2-player teams** and play a league, which is t
 
 - **Ida y vuelta** (double round-robin): the **top 2** go straight to the Finalissima.
 - **Partido único** (single round-robin, needs 4 teams): the top 4 play a **double-chance
-  bracket** — *llave alta* (1st vs 2nd) and *llave baja* (4th at the 3rd); whoever loses the alta
-  drops into a semifinal against whoever wins the baja, and that survivor meets the alta's winner
+  bracket** — *cruce alto* (1st vs 2nd) and *cruce bajo* (4th at the 3rd); whoever loses the alto
+  drops into a semifinal against whoever wins the bajo, and that survivor meets the alto's winner
   in the Finalissima. The top 2 can lose once and still win it; the 3rd and 4th are out the moment
   they lose. The better-classified team is always at home, and the home team picks the side.
 
@@ -88,7 +88,7 @@ cd backend
 | PUT    | `/api/matches/{id}/result`    | Record a result (`{ homeScore, awayScore }`) |
 
 When the last league match is recorded the playoff phase is created automatically: the **Finalissima**
-between the 1st and 2nd (ida y vuelta), or the two llaves that open the bracket, with each following
+between the 1st and 2nd (ida y vuelta), or the two cruces that open the bracket, with each following
 round appearing as soon as the one feeding it is played (partido único). Recording the Finalissima sets
 the **champion** and moves the edition to `FINISHED`.
 

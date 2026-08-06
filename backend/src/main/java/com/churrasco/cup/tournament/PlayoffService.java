@@ -21,9 +21,9 @@ import java.util.Set;
  * <ul>
  *   <li><b>Ida y vuelta</b>: the top 2 go straight to the Finalissima.</li>
  *   <li><b>Partido único</b> (needs at least {@value #MIN_TEAMS_FOR_BRACKET} teams): the top 4
- *       play a double-chance bracket — the <i>llave alta</i> (1st vs 2nd) and the <i>llave
- *       baja</i> (4th at the 3rd) open it; whoever loses the alta drops into the semifinal
- *       against whoever wins the baja, and that survivor meets the alta's winner in the
+ *       play a double-chance bracket — the <i>cruce alto</i> (1st vs 2nd) and the <i>cruce
+ *       bajo</i> (4th at the 3rd) open it; whoever loses the alto drops into the semifinal
+ *       against whoever wins the bajo, and that survivor meets the alto's winner in the
  *       Finalissima. Finishing in the top 2 buys a second life: you can lose once and still
  *       be champion, while the 3rd and the 4th are out the moment they lose.</li>
  * </ul>
@@ -73,8 +73,8 @@ public class PlayoffService {
         Long editionId = edition.getId();
         List<Match> all = matchRepository.findByEditionIdOrderByOrderIndexAsc(editionId);
         List<Match> league = all.stream().filter(m -> !m.isPlayoff()).toList();
-        List<Match> altas = matchesOf(all, Leg.LLAVE_ALTA);
-        List<Match> bajas = matchesOf(all, Leg.LLAVE_BAJA);
+        List<Match> altos = matchesOf(all, Leg.CRUCE_ALTO);
+        List<Match> bajos = matchesOf(all, Leg.CRUCE_BAJO);
         List<Match> semifinals = matchesOf(all, Leg.SEMIFINAL);
         // Editions drawn while the ladder format was in place; nothing generates these now.
         List<Match> legacy = matchesOf(all, Leg.CRUCE);
@@ -86,8 +86,8 @@ public class PlayoffService {
             // The league is not decided (yet, or any more): the whole playoff phase is
             // premature, so it goes away along with any champion it had crowned.
             dropAll(edition, legacy);
-            dropAll(edition, altas);
-            dropAll(edition, bajas);
+            dropAll(edition, altos);
+            dropAll(edition, bajos);
             dropAll(edition, semifinals);
             drop(edition, finalissima);
             return;
@@ -103,8 +103,8 @@ public class PlayoffService {
 
         if (!hasBracket(edition.isRoundTrip(), teams.size())) {
             // e.g. the edition was re-drawn as ida y vuelta: the bracket no longer applies.
-            dropAll(edition, altas);
-            dropAll(edition, bajas);
+            dropAll(edition, altos);
+            dropAll(edition, bajos);
             dropAll(edition, semifinals);
             ensure(edition, finalissima, seed(teams, standings, 0), seed(teams, standings, 1),
                     Leg.FINAL, nextOrder);
@@ -112,14 +112,14 @@ public class PlayoffService {
         }
 
         // Opening round, both halves at once: the 1st hosts the 2nd, the 3rd hosts the 4th.
-        Match alta = ensure(edition, first(altas),
-                seed(teams, standings, 0), seed(teams, standings, 1), Leg.LLAVE_ALTA, nextOrder);
-        dropAll(edition, rest(altas));
-        Match baja = ensure(edition, first(bajas),
-                seed(teams, standings, 2), seed(teams, standings, 3), Leg.LLAVE_BAJA, nextOrder + 1);
-        dropAll(edition, rest(bajas));
+        Match alto = ensure(edition, first(altos),
+                seed(teams, standings, 0), seed(teams, standings, 1), Leg.CRUCE_ALTO, nextOrder);
+        dropAll(edition, rest(altos));
+        Match bajo = ensure(edition, first(bajos),
+                seed(teams, standings, 2), seed(teams, standings, 3), Leg.CRUCE_BAJO, nextOrder + 1);
+        dropAll(edition, rest(bajos));
 
-        if (alta.getStatus() != MatchStatus.PLAYED || baja.getStatus() != MatchStatus.PLAYED) {
+        if (alto.getStatus() != MatchStatus.PLAYED || bajo.getStatus() != MatchStatus.PLAYED) {
             dropAll(edition, semifinals); // nobody has dropped down or come up yet
             drop(edition, finalissima);
             return;
@@ -129,21 +129,21 @@ public class PlayoffService {
         // The former is the 1st or the 2nd and the latter the 3rd or the 4th, so the drop-down
         // is always the better classified of the two, and the one who picks the side.
         Match semifinal = ensure(edition, first(semifinals),
-                loserOf(alta), winnerOf(baja), Leg.SEMIFINAL, nextOrder + 2);
+                loserOf(alto), winnerOf(bajo), Leg.SEMIFINAL, nextOrder + 2);
         dropAll(edition, rest(semifinals));
         if (semifinal.getStatus() != MatchStatus.PLAYED) {
             drop(edition, finalissima); // the second finalist is still unknown
             return;
         }
 
-        // The Finalissima. It can be a rematch of the llave alta, when whoever lost it comes
+        // The Finalissima. It can be a rematch of the cruce alto, when whoever lost it comes
         // all the way back; the better-classified finalist plays at home either way.
-        Team fromAlta = winnerOf(alta);
+        Team fromAlto = winnerOf(alto);
         Team fromSemifinal = winnerOf(semifinal);
-        boolean altaIsBetter = position(standings, fromAlta) < position(standings, fromSemifinal);
+        boolean altoIsBetter = position(standings, fromAlto) < position(standings, fromSemifinal);
         ensure(edition, finalissima,
-                altaIsBetter ? fromAlta : fromSemifinal,
-                altaIsBetter ? fromSemifinal : fromAlta,
+                altoIsBetter ? fromAlto : fromSemifinal,
+                altoIsBetter ? fromSemifinal : fromAlto,
                 Leg.FINAL, nextOrder + 3);
     }
 

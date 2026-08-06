@@ -11,7 +11,7 @@ import java.util.List;
  * Full view of an edition for rendering the interactive bracket.
  *
  * @param playoffs    the playoff rounds before the Finalissima, in play order (both
- *                    llaves and the semifinal they feed); empty unless the single-round
+ *                    cruces and the semifinal they feed); empty unless the single-round
  *                    format is in play and the league is over
  * @param finalissima the match for the title, null until its finalists are known
  */

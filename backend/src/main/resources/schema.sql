@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS game (
     edition_id     INTEGER NOT NULL REFERENCES edition(id) ON DELETE CASCADE,
     home_team_id   INTEGER NOT NULL REFERENCES team(id) ON DELETE CASCADE,
     away_team_id   INTEGER NOT NULL REFERENCES team(id) ON DELETE CASCADE,
-    -- IDA | VUELTA | LLAVE_ALTA | LLAVE_BAJA | SEMIFINAL | FINAL (plus the retired CRUCE)
+    -- IDA | VUELTA | CRUCE_ALTO | CRUCE_BAJO | SEMIFINAL | FINAL (plus the retired CRUCE)
     leg            TEXT    NOT NULL,
     order_index    INTEGER NOT NULL,
     home_score     INTEGER,

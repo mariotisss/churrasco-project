@@ -6,9 +6,9 @@
 // yet are previewed from the current table and marked as provisional, so you can see
 // the shape of the tournament (and who is heading where) from day one.
 //
-// In the single-round format it is a double-chance bracket: the llave alta (1º-2º) and the
-// llave baja (4º-3º) are played at once, whoever loses the alta drops into a semifinal
-// against whoever wins the baja, and that survivor meets the alta's winner in the final.
+// In the single-round format it is a double-chance bracket: the cruce alto (1º-2º) and the
+// cruce bajo (4º-3º) are played at once, whoever loses the alto drops into a semifinal
+// against whoever wins the bajo, and that survivor meets the alto's winner in the final.
 // A round only becomes real once the one feeding it is played, so the rest are previews.
 
 import { Fragment } from 'react';
@@ -195,12 +195,12 @@ interface RoundData {
 }
 
 /**
- * A column's label. The opening one holds both llaves, so it is named after the round
+ * A column's label. The opening one holds both cruces, so it is named after the round
  * rather than after a tie; legacy editions keep the name of whatever they were drawn as.
  */
 function columnLabel(column: number, ties: MatchDto[]): string {
   if (column === 0) {
-    return ties.length === 1 && ties[0].leg === 'CRUCE' ? LEG_LABELS.CRUCE : 'Llaves';
+    return ties.length === 1 && ties[0].leg === 'CRUCE' ? LEG_LABELS.CRUCE : 'Cruces';
   }
   return ties.length > 1 ? 'Semifinales' : 'Semifinal';
 }
@@ -276,15 +276,15 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
   function previewBoxes(column: number): Box[] {
     if (column === 0) {
       return [
-        { key: 'alta', provisional: true, slots: [slotFromRow(table[0]), slotFromRow(table[1])] },
-        { key: 'baja', provisional: true, slots: [slotFromRow(table[2]), slotFromRow(table[3])] },
+        { key: 'alto', provisional: true, slots: [slotFromRow(table[0]), slotFromRow(table[1])] },
+        { key: 'bajo', provisional: true, slots: [slotFromRow(table[2]), slotFromRow(table[3])] },
       ];
     }
     return [
       {
         key: 'semi',
         provisional: true,
-        slots: [pendingSlot('Perdedor de la llave alta'), pendingSlot('Ganador de la llave baja')],
+        slots: [pendingSlot('Perdedor de la cruce alto'), pendingSlot('Ganador de la cruce bajo')],
       },
     ];
   }
@@ -336,7 +336,7 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
         key: 'final',
         provisional: true,
         slots: bracket
-          ? [pendingSlot('Ganador de la llave alta'), pendingSlot('Ganador de la semifinal')]
+          ? [pendingSlot('Ganador de la cruce alto'), pendingSlot('Ganador de la semifinal')]
           : [slotFromRow(table[0]), slotFromRow(table[1])],
       };
 

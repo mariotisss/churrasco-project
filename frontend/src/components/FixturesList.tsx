@@ -14,7 +14,7 @@ export default function FixturesList({
   matches: MatchDto[];
   editionId: number;
 }) {
-  const legs: Leg[] = ['IDA', 'VUELTA', 'LLAVE_ALTA', 'LLAVE_BAJA', 'CRUCE', 'SEMIFINAL'];
+  const legs: Leg[] = ['IDA', 'VUELTA', 'CRUCE_ALTO', 'CRUCE_BAJO', 'CRUCE', 'SEMIFINAL'];
   // Single round-robin (partido único) has only IDA matches; label it "Liga".
   const hasVuelta = matches.some((m) => m.leg === 'VUELTA');
   return (

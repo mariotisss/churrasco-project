@@ -57,7 +57,7 @@ export default function QualificationOdds({ detail }: { detail: EditionDetail })
       : 'Opciones de Finalissima';
   const subtitle = seedRace
     ? bracket
-      ? 'Probabilidad de ganar la liga y elegir lado en la llave alta'
+      ? 'Probabilidad de ganar la liga y elegir lado en la cruce alto'
       : 'Probabilidad de ganar la liga y elegir lado en la Finalissima'
     : `Probabilidad de acabar entre los ${spots} primeros`;
 

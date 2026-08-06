@@ -7,10 +7,10 @@ public enum Leg {
     /** League: return round, only in the ida y vuelta format. */
     VUELTA,
     /** Playoff: 1st vs 2nd. Its winner goes straight to the Finalissima. */
-    LLAVE_ALTA,
+    CRUCE_ALTO,
     /** Playoff: 4th at the 3rd. Its loser is out of the edition. */
-    LLAVE_BAJA,
-    /** Playoff: whoever lost the llave alta against whoever won the llave baja. */
+    CRUCE_BAJO,
+    /** Playoff: whoever lost the cruce alto against whoever won the cruce bajo. */
     SEMIFINAL,
     /** The Finalissima: the match for the title. */
     FINAL,

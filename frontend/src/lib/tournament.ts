@@ -14,8 +14,8 @@ import type {
 const LEG_ORDER: Record<string, number> = {
   IDA: 0,
   VUELTA: 1,
-  LLAVE_ALTA: 2,
-  LLAVE_BAJA: 3,
+  CRUCE_ALTO: 2,
+  CRUCE_BAJO: 3,
   CRUCE: 3,
   SEMIFINAL: 4,
   FINAL: 5,
@@ -25,21 +25,23 @@ const LEG_ORDER: Record<string, number> = {
 const BRACKET_SPOTS = 4;
 
 /**
- * The bracket's columns before the Finalissima, in play order. Both llaves are played at
+ * The bracket's columns before the Finalissima, in play order. Both cruces are played at
  * the same time, so they share the first one; CRUCE rides along with them because that is
  * where the retired ladder's opening match belongs.
  */
-export const BRACKET_COLUMNS: Leg[][] = [['LLAVE_ALTA', 'LLAVE_BAJA', 'CRUCE'], ['SEMIFINAL']];
+export const BRACKET_COLUMNS: Leg[][] = [['CRUCE_ALTO', 'CRUCE_BAJO', 'CRUCE'], ['SEMIFINAL']];
 
 /** Broadcast label for each phase. */
 export const LEG_LABELS: Record<Leg, string> = {
   IDA: 'Ida',
   VUELTA: 'Vuelta',
-  LLAVE_ALTA: 'Llave alta · 1º-2º',
-  LLAVE_BAJA: 'Llave baja · 4º-3º',
+  CRUCE_ALTO: 'Cruce alto · 1º-2º',
+  CRUCE_BAJO: 'Cruce bajo · 4º-3º',
   SEMIFINAL: 'Semifinal',
   FINAL: 'Finalissima',
-  CRUCE: 'Cruce 4º–3º',
+  // Retired: named apart from the cruce bajo it resembles, so an old edition never
+  // looks like it was drawn with the current bracket.
+  CRUCE: 'Eliminatoria 4º–3º',
 };
 
 /** League matches only (everything except the knockout rounds and the Finalissima). */
