@@ -5,9 +5,14 @@
 // The bracket is always complete, even before the league ends: rounds that don't exist
 // yet are previewed from the current table and marked as provisional, so you can see
 // the shape of the tournament (and who is heading where) from day one.
+//
+// In the single-round format the rounds are a ladder, not a bracket: the 4º plays the
+// 3º, the winner plays the 2º and whoever survives plays the 1º. Each rung only becomes
+// a real match once the one below it is played, so the ones above are drawn as previews.
 
-import type { EditionDetail, MatchDto, PlayerRef, Side, StandingRow } from '../api/types';
-import { hasSemifinals, leagueProgress, playoffSpots } from '../lib/tournament';
+import { Fragment } from 'react';
+import type { EditionDetail, Leg, MatchDto, PlayerRef, Side, StandingRow } from '../api/types';
+import { LADDER_LEGS, LEG_LABELS, hasLadder, leagueProgress, playoffSpots } from '../lib/tournament';
 import TeamCrest from './TeamCrest';
 import { SIDE_LABEL, SideSwatch, sidesForMatch } from './MatchSide';
 
@@ -180,8 +185,21 @@ function BracketBox({ box }: { box: Box }) {
   );
 }
 
+/** A column of the bracket: everything played (or previewed) at the same stage. */
+interface RoundData {
+  key: string;
+  label: string;
+  boxes: Box[];
+  accent: boolean;
+}
+
+/** A round's label; a legacy edition with the old two-tie bracket says "Semifinales". */
+function roundLabel(leg: Leg, ties: number): string {
+  return leg === 'SEMIFINAL' && ties > 1 ? 'Semifinales' : LEG_LABELS[leg];
+}
+
 export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
-  const semis = hasSemifinals(detail);
+  const ladder = hasLadder(detail);
   const fin = detail.finalissima;
   const champ = detail.champion;
   const table = detail.standings;
@@ -234,20 +252,70 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
     };
   }
 
-  // --- Round 1: the semifinal ties, or the two teams that go straight to the final.
-  let firstRound: Box[];
-  if (semis) {
-    firstRound =
-      detail.semifinals.length === 2
-        ? detail.semifinals.map((m) => boxFromMatch(m))
-        : [
-            { key: 'sf1', provisional: true, slots: [slotFromRow(table[0]), slotFromRow(table[3])] },
-            { key: 'sf2', provisional: true, slots: [slotFromRow(table[1]), slotFromRow(table[2])] },
-          ];
-  } else {
-    firstRound = table
-      .slice(0, playoffSpots(detail))
-      .map((row, i) => ({ key: `seed${i}`, provisional: false, slots: [slotFromRow(row)] }));
+  function pendingSlot(placeholder: string): Slot {
+    return {
+      seed: null,
+      name: null,
+      players: null,
+      score: null,
+      points: null,
+      side: null,
+      outcome: null,
+      placeholder,
+    };
+  }
+
+  // --- The rounds before the Finalissima. The ones that already exist are drawn from
+  // their matches, grouped by leg; a legacy edition (the old 1º-4º / 2º-3º bracket) lands
+  // here as a single round with two ties, which draws just fine.
+  const existingLegs = LADDER_LEGS.filter((leg) => detail.playoffs.some((m) => m.leg === leg));
+  const rounds: RoundData[] = existingLegs.map((leg) => {
+    const ties = detail.playoffs.filter((m) => m.leg === leg);
+    return {
+      key: leg,
+      label: roundLabel(leg, ties.length),
+      accent: true,
+      boxes: ties.map((m) => boxFromMatch(m)),
+    };
+  });
+
+  // Rungs still to climb, previewed from the table so the whole ladder is visible from
+  // day one: the 3º hosts the 4º, and the 2º waits for whoever comes up.
+  if (ladder) {
+    const climbed = existingLegs.length
+      ? LADDER_LEGS.indexOf(existingLegs[existingLegs.length - 1])
+      : -1;
+    for (const leg of LADDER_LEGS.slice(climbed + 1)) {
+      rounds.push({
+        key: leg,
+        label: LEG_LABELS[leg],
+        accent: false,
+        boxes: [
+          {
+            key: leg,
+            provisional: true,
+            slots:
+              leg === 'CRUCE'
+                ? [slotFromRow(table[2]), slotFromRow(table[3])]
+                : [slotFromRow(table[1]), pendingSlot('Ganador del cruce')],
+          },
+        ],
+      });
+    }
+  }
+
+  // Ida y vuelta: no knockout rounds at all, the top 2 go straight to the Finalissima.
+  if (rounds.length === 0) {
+    rounds.push({
+      key: 'liga',
+      label: 'Clasificados · Liga',
+      accent: false,
+      boxes: table.slice(0, playoffSpots(detail)).map((row, i) => ({
+        key: `seed${i}`,
+        provisional: false,
+        slots: [slotFromRow(row)],
+      })),
+    });
   }
 
   // --- The Finalissima: the real match, or a preview of who is heading there.
@@ -256,26 +324,25 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
     : {
         key: 'final',
         provisional: true,
-        slots: semis
-          ? [1, 2].map((n) => ({
-              seed: null,
-              name: null,
-              players: null,
-              score: null,
-              points: null,
-              side: null,
-              outcome: null,
-              placeholder: `Ganador semifinal ${n}`,
-            }))
+        slots: ladder
+          ? [slotFromRow(table[0]), pendingSlot('Ganador de la semifinal')]
           : [slotFromRow(table[0]), slotFromRow(table[1])],
       };
+
+  // One column per round plus the Finalissima and the trophy, with a connector between.
+  const gridClass =
+    rounds.length > 1
+      ? 'lg:grid-cols-[minmax(0,1fr)_2rem_minmax(0,1fr)_2rem_minmax(0,1fr)_2rem_minmax(0,0.85fr)]'
+      : 'lg:grid-cols-[minmax(0,1.1fr)_2.5rem_minmax(0,1fr)_2.5rem_minmax(0,0.9fr)]';
 
   return (
     <div className="panel p-5 sm:p-6">
       {/* Format + league progress: the context the bracket hangs from. */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-coal-800 pb-4">
         <p className="font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-          {semis ? 'Liga a una vuelta · semifinales y final' : 'Liga ida y vuelta · final directa'}
+          {ladder
+            ? 'Liga a una vuelta · eliminatorias en escalera'
+            : 'Liga ida y vuelta · final directa'}
         </p>
         <div className="flex items-center gap-2.5">
           <div className="h-1 w-24 overflow-hidden rounded-full bg-coal-800">
@@ -290,21 +357,24 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_2.5rem_minmax(0,1fr)_2.5rem_minmax(0,0.9fr)] lg:items-stretch lg:gap-x-0">
-        <Round label={semis ? 'Semifinales' : 'Clasificados · Liga'} accent={semis && !!detail.semifinals.length}>
-          {firstRound.map((box) => (
-            <BracketBox key={box.key} box={box} />
-          ))}
-        </Round>
-
-        <Connector kind="merge" />
+      <div className={`grid gap-4 lg:items-stretch lg:gap-x-0 ${gridClass}`}>
+        {rounds.map((round) => (
+          <Fragment key={round.key}>
+            <Round label={round.label} accent={round.accent}>
+              {round.boxes.map((box) => (
+                <BracketBox key={box.key} box={box} />
+              ))}
+            </Round>
+            <Connector kind={round.boxes.length > 1 ? 'merge' : 'line'} />
+          </Fragment>
+        ))}
 
         <Round label="Finalissima" accent={!!fin}>
           <BracketBox box={finalBox} />
           {!fin && (
             <p className="text-center font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-              {semis
-                ? 'Se define al jugarse las semifinales'
+              {ladder
+                ? 'Se define al jugarse las eliminatorias'
                 : leagueDone
                   ? 'Por jugar'
                   : 'Se define al terminar la liga'}

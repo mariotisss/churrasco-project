@@ -33,7 +33,7 @@ export default function StandingsTable({
 }: {
   rows: StandingRow[];
   form?: Map<number, FormResult[]>;
-  /** How many places qualify for the playoffs: 4 (semifinals) or 2 (direct final). */
+  /** How many places qualify for the playoffs: 4 (the ladder) or 2 (direct final). */
   qualifyingSpots?: number;
 }) {
   if (rows.length === 0) {
@@ -119,7 +119,7 @@ export default function StandingsTable({
       <div className="flex items-center gap-2 border-t border-coal-700/70 px-4 py-3 font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-500">
         <span className="h-3 w-1.5 rounded-sm bg-gradient-to-b from-emerald-400 to-emerald-600" />
         {qualifyingSpots >= 4
-          ? `Los ${qualifyingSpots} primeros juegan las semifinales`
+          ? `Los ${qualifyingSpots} primeros juegan las eliminatorias`
           : `Los ${qualifyingSpots} primeros disputan la Finalissima`}
       </div>
     </div>

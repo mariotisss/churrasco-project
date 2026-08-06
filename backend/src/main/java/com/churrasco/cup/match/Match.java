@@ -55,9 +55,9 @@ public class Match {
     private MatchStatus status = MatchStatus.PENDING;
 
     /**
-     * True for playoff matches (semifinals and the Finalissima), i.e. everything that
-     * doesn't count for the league table. The column keeps its original name from when
-     * the Finalissima was the only playoff match there was.
+     * True for playoff matches (the knockout rounds and the Finalissima), i.e. everything
+     * that doesn't count for the league table. The column keeps its original name from
+     * when the Finalissima was the only playoff match there was.
      */
     @Column(name = "is_finalissima", nullable = false)
     private boolean playoff = false;
@@ -161,12 +161,12 @@ public class Match {
         return status;
     }
 
-    /** True for semifinals and the Finalissima: playoff matches never count for the table. */
+    /** True for the knockout rounds and the Finalissima: they never count for the table. */
     public boolean isPlayoff() {
         return playoff;
     }
 
-    /** The Finalissima itself (as opposed to a semifinal). */
+    /** The Finalissima itself (as opposed to an earlier knockout round). */
     public boolean isFinal() {
         return playoff && leg == Leg.FINAL;
     }

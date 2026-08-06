@@ -1,11 +1,17 @@
 # 🏆 Churrasco's Cup
 
 Web overview for the office's monthly table-football (futbolín) tournament. Each edition (month)
-players sign up, get drawn into **2-player teams**, play a **double round-robin** (home and away),
-and the **top 2** in the standings dispute the **Finalissima** to decide who wins the edition.
+players sign up, get drawn into **2-player teams** and play a league, which is then decided by the
+**Finalissima**. Two formats:
+
+- **Ida y vuelta** (double round-robin): the **top 2** go straight to the Finalissima.
+- **Partido único** (single round-robin, needs 4 teams): the league feeds a **ladder** — the 4th
+  plays the 3rd, the winner plays the 2nd, and whoever survives plays the 1st in the Finalissima.
+  Finishing higher is worth more: you enter later and always at home (the home team picks the side).
 
 - **Player** management (add/edit; soft delete to keep history).
-- **Team draw** per edition (if the number of players is odd, one sits out at random).
+- **Team draw** per edition (if the number of players is odd, one sits out at random; pairs from
+  the previous edition are never repeated).
 - Automatic **schedule** generation and **result** recording.
 - **Interactive bracket** (standings + matches + Finalissima) that updates as you score.
 
@@ -74,12 +80,18 @@ cd backend
 | GET    | `/api/editions`               | List editions                                |
 | POST   | `/api/editions`               | Create an edition                            |
 | GET    | `/api/editions/{id}`          | Full detail (the bracket)                    |
+| DELETE | `/api/editions/{id}`          | Delete an edition, its teams and its matches |
 | POST   | `/api/editions/{id}/draw`     | Draw teams (`{ participantIds? }`)           |
 | GET    | `/api/editions/{id}/standings`| Computed standings                           |
 | PUT    | `/api/matches/{id}/result`    | Record a result (`{ homeScore, awayScore }`) |
 
-When the last league match is recorded, the **Finalissima** is created automatically between the
-1st and 2nd teams. Recording the Finalissima sets the **champion** and moves the edition to `FINISHED`.
+When the last league match is recorded the playoff phase is created automatically: the **Finalissima**
+between the 1st and 2nd (ida y vuelta), or the first rung of the ladder, each following round appearing
+as the one below it is played (partido único). Recording the Finalissima sets the **champion** and moves
+the edition to `FINISHED`.
+
+A re-draw only re-shuffles the players of the edition's original draw, and it is blocked once any
+result has been recorded.
 
 ## Design notes
 

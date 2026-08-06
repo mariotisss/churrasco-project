@@ -2,16 +2,10 @@ import { useState } from 'react';
 import { useClearResult, useRecordResult } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { Leg, MatchDto } from '../api/types';
+import { LEG_LABELS } from '../lib/tournament';
 import TeamCrest from './TeamCrest';
 import { SideCard, sidesForMatch } from './MatchSide';
 import SideChooser from './SideChooser';
-
-const LEG_LABELS: Record<Leg, string> = {
-  IDA: 'Ida',
-  VUELTA: 'Vuelta',
-  SEMIFINAL: 'Semifinales',
-  FINAL: 'Finalissima',
-};
 
 export default function FixturesList({
   matches,
@@ -20,7 +14,7 @@ export default function FixturesList({
   matches: MatchDto[];
   editionId: number;
 }) {
-  const legs: Leg[] = ['IDA', 'VUELTA', 'SEMIFINAL'];
+  const legs: Leg[] = ['IDA', 'VUELTA', 'CRUCE', 'SEMIFINAL'];
   // Single round-robin (partido único) has only IDA matches; label it "Liga".
   const hasVuelta = matches.some((m) => m.leg === 'VUELTA');
   return (

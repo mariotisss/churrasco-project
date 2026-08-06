@@ -6,7 +6,9 @@ public enum Leg {
     IDA,
     /** League: return round, only in the ida y vuelta format. */
     VUELTA,
-    /** Playoff: 1st vs 4th and 2nd vs 3rd, only in the single-round format. */
+    /** Playoff: 4th at the 3rd, the first rung of the single-round format's ladder. */
+    CRUCE,
+    /** Playoff: the 2nd against whoever won the cruce, only in the single-round format. */
     SEMIFINAL,
     /** The Finalissima: the match for the title. */
     FINAL

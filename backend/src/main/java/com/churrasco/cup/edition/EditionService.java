@@ -1,14 +1,12 @@
 package com.churrasco.cup.edition;
 
 import com.churrasco.cup.api.DtoMapper;
-import com.churrasco.cup.common.BadRequestException;
 import com.churrasco.cup.common.NotFoundException;
 import com.churrasco.cup.edition.dto.CreateEditionRequest;
 import com.churrasco.cup.edition.dto.DrawRequest;
 import com.churrasco.cup.edition.dto.EditionDetailDto;
 import com.churrasco.cup.edition.dto.EditionSummaryDto;
 import com.churrasco.cup.edition.dto.StandingRowDto;
-import com.churrasco.cup.match.Leg;
 import com.churrasco.cup.match.Match;
 import com.churrasco.cup.match.MatchRepository;
 import com.churrasco.cup.match.dto.MatchDto;
@@ -70,8 +68,9 @@ public class EditionService {
         List<StandingRowDto> standings = standingsCalculator.compute(teams, leagueMatches);
         List<TeamDto> teamDtos = teams.stream().map(DtoMapper::toTeamDto).toList();
         List<MatchDto> matchDtos = matches.stream().map(DtoMapper::toMatchDto).toList();
-        List<MatchDto> semifinals = matches.stream()
-                .filter(m -> m.getLeg() == Leg.SEMIFINAL)
+        // Every playoff round before the Finalissima, in play order (the ladder's rungs).
+        List<MatchDto> playoffs = matches.stream()
+                .filter(m -> m.isPlayoff() && !m.isFinal())
                 .map(DtoMapper::toMatchDto)
                 .toList();
 
@@ -86,7 +85,7 @@ public class EditionService {
                 teamDtos,
                 standings,
                 matchDtos,
-                semifinals,
+                playoffs,
                 DtoMapper.toMatchDto(finalissima)
         );
     }
@@ -100,17 +99,15 @@ public class EditionService {
     }
 
     /**
-     * Deletes a sandbox edition and its teams/matches. Only test editions can be
-     * removed, so real history is never lost. SQLite FK cascade isn't enabled, so
+     * Deletes an edition and its teams/matches. History is lost for good (a deleted
+     * edition stops counting for the all-time ranking), so the UI guards the button
+     * behind an explicit countdown confirmation. SQLite FK cascade isn't enabled, so
      * children are deleted explicitly (matches reference teams, hence matches first).
      */
     @Transactional
     public void delete(Long id) {
         Edition edition = editionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Edicion " + id + " no encontrada"));
-        if (!edition.isTest()) {
-            throw new BadRequestException("Solo se pueden borrar ediciones de prueba");
-        }
         matchRepository.deleteByEditionId(id);
         teamRepository.deleteByEditionId(id);
         matchRepository.flush();

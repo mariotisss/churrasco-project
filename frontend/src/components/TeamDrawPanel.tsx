@@ -36,7 +36,9 @@ export default function TeamDrawPanel({
   function handleDraw() {
     setError(null);
     drawTeams.mutate(
-      { participantIds: selected ?? undefined, roundTrip },
+      // Un re-sorteo vuelve a mezclar a los que ya se apuntaron (los manda el backend,
+      // que sabe quién entró en el sorteo inicial), nunca a todos los jugadores activos.
+      { participantIds: hasTeams ? undefined : (selected ?? undefined), roundTrip },
       {
         onSuccess: (detail) => onDrawn?.(detail),
         onError: (err) => setError(apiErrorMessage(err)),
@@ -44,16 +46,19 @@ export default function TeamDrawPanel({
     );
   }
 
-  const selectedCount = selected?.length ?? 0;
-  const canDraw = selectedCount >= 4;
+  // Quienes entran en el sorteo: los seleccionados, o los del sorteo inicial si ya se
+  // ha sorteado (los que están en un equipo más el que se quedó fuera).
+  const drawnCount = edition.teams.length * 2 + (edition.satOutPlayer ? 1 : 0);
+  const participantCount = hasTeams ? drawnCount : (selected?.length ?? 0);
+  const canDraw = participantCount >= 4;
   // A una vuelta la liga es demasiado corta para decidir nada, así que se remata con
-  // semifinales: hacen falta 4 equipos, o sea 8 jugadores (con impar uno se queda fuera).
-  const canSingleRound = Math.floor(selectedCount / 2) >= 4;
+  // eliminatorias: hacen falta 4 equipos, o sea 8 jugadores (con impar uno se queda fuera).
+  const canSingleRound = Math.floor(participantCount / 2) >= 4;
 
   // Si la selección se queda corta, el partido único deja de estar disponible.
   useEffect(() => {
-    if (selected !== null && !canSingleRound) setRoundTrip(true);
-  }, [selected, canSingleRound]);
+    if ((hasTeams || selected !== null) && !canSingleRound) setRoundTrip(true);
+  }, [hasTeams, selected, canSingleRound]);
 
   return (
     <div className="panel space-y-4 p-5">
@@ -120,6 +125,14 @@ export default function TeamDrawPanel({
         </p>
       )}
 
+      {hasTeams && !hasResults && (
+        <p className="rounded-xl border border-coal-700 bg-coal-950/50 px-3 py-2.5 text-sm text-zinc-400">
+          🔁 El re-sorteo vuelve a mezclar a los{' '}
+          <strong className="font-semibold text-zinc-200">{participantCount} jugadores</strong> del
+          sorteo inicial de esta edición.
+        </p>
+      )}
+
       {(!hasTeams || !hasResults) && (
         <div>
           <p className="mb-1.5 font-condensed text-sm font-semibold uppercase tracking-wide text-zinc-400">
@@ -137,15 +150,21 @@ export default function TeamDrawPanel({
               disabled={!canSingleRound}
               onClick={() => setRoundTrip(false)}
               title="Partido único"
-              subtitle="Cada pareja se enfrenta una vez · semifinales y final"
+              subtitle="Cada pareja se enfrenta una vez · eliminatorias en escalera"
             />
           </div>
           {!canSingleRound && (
             <p className="mt-1.5 font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              El partido único necesita 8 jugadores (4 equipos) para jugar semifinales
+              El partido único necesita 8 jugadores (4 equipos) para las eliminatorias
             </p>
           )}
         </div>
+      )}
+
+      {(!hasTeams || !hasResults) && (
+        <p className="font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          🚫 Las parejas de la edición anterior no se repiten
+        </p>
       )}
 
       {(!hasTeams || !hasResults) && (
@@ -158,7 +177,7 @@ export default function TeamDrawPanel({
             ? 'Sorteando…'
             : hasTeams
               ? 'Re-sortear equipos'
-              : `Sortear equipos (${selectedCount})`}
+              : `Sortear equipos (${participantCount})`}
         </button>
       )}
 

@@ -59,7 +59,7 @@ public class MatchService {
             if (edition.getStatus() == EditionStatus.TEAMS_DRAWN) {
                 edition.setStatus(EditionStatus.IN_PROGRESS);
             }
-            // A league or semifinal result can change who qualifies further up the bracket.
+            // A league or knockout result can change who qualifies further up the bracket.
             playoffService.reconcile(edition);
         }
         editionRepository.save(edition);
@@ -69,7 +69,7 @@ public class MatchService {
 
     /**
      * Removes a match's recorded result, reverting it to PENDING (as if never played).
-     * A blanked score must never linger as a 0-0 draw. Clearing a league or semifinal
+     * A blanked score must never linger as a 0-0 draw. Clearing a league or knockout
      * result invalidates whatever came after it, so the playoff phase is reconciled;
      * clearing the Finalissima simply un-decides the edition.
      */

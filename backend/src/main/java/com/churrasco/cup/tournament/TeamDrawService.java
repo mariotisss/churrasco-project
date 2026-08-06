@@ -18,15 +18,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * Draws the teams for an edition and generates its schedule.
  * If the number of participants is odd, the player who sits out is drawn only among
  * those with the most played matches, so nobody lagging behind is ever left out.
+ * Pairs that played together in the previous edition are not repeated.
  */
 @Service
 public class TeamDrawService {
@@ -63,19 +66,22 @@ public class TeamDrawService {
                     "No se puede re-sortear: ya hay resultados anotados en esta edicion");
         }
 
-        List<Player> participants = resolveParticipants(participantIds);
+        List<Player> participants = resolveParticipants(edition, participantIds);
         if (participants.size() < MIN_PARTICIPANTS) {
             throw new BadRequestException(
                     "Se necesitan al menos " + MIN_PARTICIPANTS + " jugadores (2 equipos) para sortear");
         }
-        // A una vuelta la liga es corta, así que se decide con semifinales: sin 4 equipos
+        // A una vuelta la liga es corta, así que se decide con eliminatorias: sin 4 equipos
         // no hay cuadro que jugar (con impares uno se queda fuera, de ahí el redondeo).
         int teamCount = participants.size() / 2;
-        if (!roundTrip && teamCount < PlayoffService.MIN_TEAMS_FOR_SEMIS) {
+        if (!roundTrip && teamCount < PlayoffService.MIN_TEAMS_FOR_LADDER) {
             throw new BadRequestException("El formato a una vuelta necesita al menos "
-                    + (PlayoffService.MIN_TEAMS_FOR_SEMIS * 2) + " jugadores ("
-                    + PlayoffService.MIN_TEAMS_FOR_SEMIS + " equipos) para jugar semifinales");
+                    + (PlayoffService.MIN_TEAMS_FOR_LADDER * 2) + " jugadores ("
+                    + PlayoffService.MIN_TEAMS_FOR_LADDER + " equipos) para jugar las eliminatorias");
         }
+
+        // Pairs to avoid, read before the previous draw of this edition is wiped.
+        Set<Set<Long>> repeats = pairsOfPreviousEdition(edition);
 
         // Clear a previous draw (matches before teams because of the foreign keys).
         matchRepository.deleteByEditionId(editionId);
@@ -98,9 +104,9 @@ public class TeamDrawService {
         }
 
         List<Team> teams = new ArrayList<>();
-        for (int i = 0; i < pool.size(); i += 2) {
-            Player p1 = pool.get(i);
-            Player p2 = pool.get(i + 1);
+        for (Player[] pair : pairUp(pool, repeats)) {
+            Player p1 = pair[0];
+            Player p2 = pair[1];
             // Roles are random too: player1 plays up front ("delante") and player2 at the
             // back ("atras"). The pool is already shuffled, so an extra coin flip keeps the
             // within-pair order independent of the team name's left-to-right reading.
@@ -120,6 +126,86 @@ public class TeamDrawService {
         edition.setStatus(EditionStatus.TEAMS_DRAWN);
         edition.setChampionTeamId(null);
         editionRepository.save(edition);
+    }
+
+    /**
+     * Splits the (already shuffled) pool into pairs, skipping the pairs that played
+     * together in the previous edition. Backtracks because a greedy pass can paint itself
+     * into a corner: the last two players left may be exactly a pair to avoid. If no valid
+     * split exists at all, the constraint is dropped rather than failing the draw — with a
+     * small enough pool every pairing can be a repeat.
+     */
+    private List<Player[]> pairUp(List<Player> pool, Set<Set<Long>> repeats) {
+        List<Player[]> pairs = new ArrayList<>();
+        if (!repeats.isEmpty() && pairWithout(new ArrayList<>(pool), repeats, pairs)) {
+            return pairs;
+        }
+        pairs.clear();
+        for (int i = 0; i < pool.size(); i += 2) {
+            pairs.add(new Player[]{pool.get(i), pool.get(i + 1)});
+        }
+        return pairs;
+    }
+
+    /**
+     * Pairs everyone in {@code remaining} avoiding {@code repeats}, appending the pairs
+     * found to {@code pairs}. Candidates are tried in the pool's (shuffled) order, so the
+     * result is as random as the draw itself. Returns false when it cannot be done.
+     */
+    private boolean pairWithout(List<Player> remaining, Set<Set<Long>> repeats, List<Player[]> pairs) {
+        if (remaining.isEmpty()) {
+            return true;
+        }
+        Player first = remaining.remove(0);
+        for (int i = 0; i < remaining.size(); i++) {
+            Player partner = remaining.get(i);
+            if (repeats.contains(pairKey(first, partner))) {
+                continue;
+            }
+            remaining.remove(i);
+            pairs.add(new Player[]{first, partner});
+            if (pairWithout(remaining, repeats, pairs)) {
+                return true;
+            }
+            pairs.remove(pairs.size() - 1);
+            remaining.add(i, partner);
+        }
+        remaining.add(0, first);
+        return false;
+    }
+
+    /**
+     * The pairs drawn in the edition right before this one, so a team never repeats two
+     * editions in a row. Sandbox editions don't count (they are not part of the run of
+     * editions), and an edition that hasn't been drawn yet has nothing to say.
+     */
+    private Set<Set<Long>> pairsOfPreviousEdition(Edition edition) {
+        for (Edition candidate : editionRepository.findAllByOrderByCreatedAtDescIdDesc()) {
+            if (candidate.isTest() || !isBefore(candidate, edition)) {
+                continue;
+            }
+            List<Team> teams = teamRepository.findByEditionIdOrderByIdAsc(candidate.getId());
+            if (teams.isEmpty()) {
+                continue;
+            }
+            Set<Set<Long>> pairs = new HashSet<>();
+            for (Team team : teams) {
+                pairs.add(pairKey(team.getPlayer1(), team.getPlayer2()));
+            }
+            return pairs;
+        }
+        return Set.of();
+    }
+
+    /** Editions run in creation order; the id breaks a tie between two created together. */
+    private static boolean isBefore(Edition candidate, Edition edition) {
+        int byDate = candidate.getCreatedAt().compareTo(edition.getCreatedAt());
+        return byDate != 0 ? byDate < 0 : candidate.getId() < edition.getId();
+    }
+
+    /** A pair as an unordered key: who plays up front is irrelevant here. */
+    private static Set<Long> pairKey(Player a, Player b) {
+        return Set.of(a.getId(), b.getId());
     }
 
     /** Random pick among the participants with the highest number of played matches. */
@@ -154,9 +240,16 @@ public class TeamDrawService {
         return counts;
     }
 
-    private List<Player> resolveParticipants(List<Long> participantIds) {
+    /**
+     * Who takes part in the draw: the players the client asked for, or — when it doesn't
+     * say — whoever is already drawn into the edition. A re-draw must shuffle exactly the
+     * players who signed up for this edition, never everyone active. Only an edition with
+     * no teams yet falls back to the full list of active players.
+     */
+    private List<Player> resolveParticipants(Edition edition, List<Long> participantIds) {
         if (participantIds == null || participantIds.isEmpty()) {
-            return playerRepository.findByActiveTrueOrderByNameAsc();
+            List<Player> drawn = currentParticipants(edition);
+            return drawn.isEmpty() ? playerRepository.findByActiveTrueOrderByNameAsc() : drawn;
         }
         // Keep uniqueness while preserving insertion order.
         Map<Long, Player> unique = new LinkedHashMap<>();
@@ -169,5 +262,22 @@ public class TeamDrawService {
             unique.put(id, player);
         }
         return new ArrayList<>(unique.values());
+    }
+
+    /** The players of the edition's current teams, plus whoever sat out that draw. */
+    private List<Player> currentParticipants(Edition edition) {
+        List<Team> teams = teamRepository.findByEditionIdOrderByIdAsc(edition.getId());
+        if (teams.isEmpty()) {
+            return List.of();
+        }
+        List<Player> players = new ArrayList<>();
+        for (Team team : teams) {
+            players.add(team.getPlayer1());
+            players.add(team.getPlayer2());
+        }
+        if (edition.getSatOutPlayer() != null) {
+            players.add(edition.getSatOutPlayer());
+        }
+        return players;
     }
 }

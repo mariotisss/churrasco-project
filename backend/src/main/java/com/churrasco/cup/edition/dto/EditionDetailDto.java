@@ -10,7 +10,8 @@ import java.util.List;
 /**
  * Full view of an edition for rendering the interactive bracket.
  *
- * @param semifinals  the two semifinals (1st vs 4th, 2nd vs 3rd), empty unless the
+ * @param playoffs    the playoff rounds before the Finalissima, in play order (the
+ *                    cruce 4th-3rd and the semifinal against the 2nd); empty unless the
  *                    single-round format is in play and the league is over
  * @param finalissima the match for the title, null until its finalists are known
  */
@@ -25,7 +26,7 @@ public record EditionDetailDto(
         List<TeamDto> teams,
         List<StandingRowDto> standings,
         List<MatchDto> matches,
-        List<MatchDto> semifinals,
+        List<MatchDto> playoffs,
         MatchDto finalissima
 ) {
 }

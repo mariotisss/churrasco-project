@@ -3,7 +3,13 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useDeleteEdition, useEdition } from '../api/hooks';
 import { apiErrorMessage } from '../api/client';
 import type { EditionDetail, TeamDto } from '../api/types';
-import { formByTeam, leagueProgress, nextPendingMatch, playoffSpots } from '../lib/tournament';
+import {
+  LEG_LABELS,
+  formByTeam,
+  leagueProgress,
+  nextPendingMatch,
+  playoffSpots,
+} from '../lib/tournament';
 import StatusBadge from '../components/StatusBadge';
 import TestBadge from '../components/TestBadge';
 import StandingsTable from '../components/StandingsTable';
@@ -15,7 +21,7 @@ import TeamCrest from '../components/TeamCrest';
 import TeamLineup from '../components/TeamLineup';
 import RoadToFinal from '../components/RoadToFinal';
 import QualificationOdds from '../components/QualificationOdds';
-import ConfirmDialog from '../components/ConfirmDialog';
+import DeleteEditionDialog from '../components/DeleteEditionDialog';
 import { SideCard, sidesForMatch } from '../components/MatchSide';
 
 type Tab = 'resumen' | 'clasificacion' | 'partidos' | 'equipos';
@@ -73,7 +79,7 @@ export default function EditionDetailPage() {
 
       <div className="flex items-center justify-between gap-3">
         <BackLink />
-        {edition.test && <DeleteEditionButton edition={edition} />}
+        <DeleteEditionButton edition={edition} />
       </div>
 
       {/* Scoreboard header */}
@@ -185,10 +191,11 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
   const next = nextPendingMatch(edition.matches);
   const fin = edition.finalissima;
   const finalPending = fin && fin.status !== 'PLAYED';
-  // Once the league is over the semifinals are what's next, and they need their scores.
-  const semisPending = edition.semifinals.some((m) => m.status !== 'PLAYED');
+  // Once the league is over the ladder is what's next, and it needs its scores. Each rung
+  // only shows up when the one below it has been played, so at most one is ever pending.
+  const playoffsPending = edition.playoffs.some((m) => m.status !== 'PLAYED');
 
-  if (!next && !semisPending && !finalPending) return null;
+  if (!next && !playoffsPending && !finalPending) return null;
 
   return (
     <div className="space-y-6">
@@ -227,17 +234,25 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
           </div>
         </div>
       )}
-      {semisPending && (
+      {playoffsPending && (
         <div>
-          <h2 className="lower-third mb-3">Semifinales</h2>
+          <h2 className="lower-third mb-3">Eliminatorias</h2>
           <p className="mb-3 font-condensed text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-            1º–4º y 2º–3º · el mejor clasificado elige lado
+            El 4º visita al 3º, el ganador al 2º y el que sobreviva al 1º · el mejor clasificado
+            elige lado
           </p>
-          <ul className="panel divide-y divide-coal-800/70">
-            {edition.semifinals.map((match) => (
-              <MatchRow key={match.id} match={match} editionId={edition.id} />
+          <div className="space-y-4">
+            {edition.playoffs.map((match) => (
+              <div key={match.id}>
+                <h3 className="mb-1.5 font-condensed text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">
+                  {LEG_LABELS[match.leg]}
+                </h3>
+                <ul className="panel divide-y divide-coal-800/70">
+                  <MatchRow match={match} editionId={edition.id} />
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
       {finalPending && (
@@ -339,17 +354,9 @@ function DeleteEditionButton({ edition }: { edition: EditionDetail }) {
       >
         Borrar edición
       </button>
-      <ConfirmDialog
+      <DeleteEditionDialog
         open={confirming}
-        title="Borrar edición de prueba"
-        confirmLabel="Borrar"
-        message={
-          <>
-            ¿Seguro que quieres borrar{' '}
-            <span className="font-semibold text-zinc-200">{edition.name}</span>? Se eliminarán sus
-            equipos y partidos. Esta acción no se puede deshacer.
-          </>
-        }
+        edition={edition}
         loading={deleteEdition.isPending}
         error={error}
         onConfirm={confirmDelete}

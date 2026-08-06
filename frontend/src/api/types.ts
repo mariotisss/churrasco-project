@@ -30,7 +30,7 @@ export interface TeamDto {
   player2: Player;
 }
 
-export type Leg = 'IDA' | 'VUELTA' | 'SEMIFINAL' | 'FINAL';
+export type Leg = 'IDA' | 'VUELTA' | 'CRUCE' | 'SEMIFINAL' | 'FINAL';
 export type MatchStatus = 'PENDING' | 'PLAYED';
 
 /** The two sides of the futbolín table. */
@@ -46,7 +46,7 @@ export interface MatchDto {
   homeScore: number | null;
   awayScore: number | null;
   status: MatchStatus;
-  /** true = semifinal or Finalissima; these never count for the league table. */
+  /** true = knockout round or Finalissima; these never count for the league table. */
   playoff: boolean;
   /** Side picked by the home team of a playoff match, null while nobody has picked. */
   chosenSide: Side | null;
@@ -113,7 +113,11 @@ export interface EditionDetail {
   teams: TeamDto[];
   standings: StandingRow[];
   matches: MatchDto[];
-  /** 1º vs 4º and 2º vs 3º; only in the single-round format, once the league is over. */
-  semifinals: MatchDto[];
+  /**
+   * Knockout rounds before the Finalissima, in play order: the cruce (4º at the 3º) and
+   * the semifinal against the 2º. Only in the single-round format, and each one only
+   * once the round below it has been played.
+   */
+  playoffs: MatchDto[];
   finalissima: MatchDto | null;
 }
