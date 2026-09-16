@@ -15,6 +15,7 @@ import { Fragment } from 'react';
 import type { EditionDetail, MatchDto, PlayerRef, Side, StandingRow } from '../api/types';
 import { BRACKET_COLUMNS, LEG_LABELS, hasBracket, leagueProgress, playoffSpots } from '../lib/tournament';
 import TeamCrest from './TeamCrest';
+import PlayerNames from './PlayerNames';
 import { SIDE_LABEL, SideSwatch, sidesForMatch } from './MatchSide';
 
 /** One team's line inside a bracket box. */
@@ -78,11 +79,12 @@ function Round({
 /**
  * Bracket connector between two rounds, drawn edge to edge of the cell so it lines up
  * with the boxes on either side. `merge` joins two boxes into one, `line` is a straight
- * carry-over. Hidden on small screens, where the rounds stack instead.
+ * carry-over. Hidden below xl, where the rounds stack instead: side by side any narrower,
+ * a box has no room left for the names once the seed, crest and points are in.
  */
 function Connector({ kind }: { kind: 'merge' | 'line' }) {
   return (
-    <div className="hidden min-w-0 flex-col lg:flex">
+    <div className="hidden min-w-0 flex-col xl:flex">
       {/* Keeps the drawing aligned with the boxes, below the round labels. */}
       <p aria-hidden className="mb-2.5 font-condensed text-[11px] font-bold uppercase leading-normal opacity-0">
         ·
@@ -108,6 +110,11 @@ function Connector({ kind }: { kind: 'merge' | 'line' }) {
 function SlotRow({ slot }: { slot: Slot }) {
   const lost = slot.outcome === 'loss';
   const won = slot.outcome === 'win';
+  const tone = won
+    ? 'font-bold text-white'
+    : lost
+      ? 'font-medium text-zinc-500'
+      : 'font-semibold text-zinc-200';
 
   return (
     <div className={`flex items-stretch gap-0 ${won ? 'bg-emerald-500/[0.07]' : ''}`}>
@@ -118,7 +125,7 @@ function SlotRow({ slot }: { slot: Slot }) {
       >
         {slot.side && <SideSwatch side={slot.side} className="block h-full w-full" />}
       </span>
-      <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2">
         <span
           className={`w-4 shrink-0 text-center font-condensed text-xs font-bold tabular-nums ${
             lost ? 'text-zinc-600' : 'text-zinc-500'
@@ -128,18 +135,12 @@ function SlotRow({ slot }: { slot: Slot }) {
         </span>
         {slot.name ? (
           <>
-            <TeamCrest name={slot.name} players={slot.players ?? undefined} size="sm" />
-            <span
-              className={`min-w-0 flex-1 truncate text-[13px] ${
-                won
-                  ? 'font-bold text-white'
-                  : lost
-                    ? 'font-medium text-zinc-500'
-                    : 'font-semibold text-zinc-200'
-              }`}
-            >
-              {slot.name}
-            </span>
+            <TeamCrest name={slot.name} players={slot.players ?? undefined} size="xs" />
+            {slot.players ? (
+              <PlayerNames players={slot.players} className={`flex-1 text-[13px] leading-tight ${tone}`} />
+            ) : (
+              <span className={`min-w-0 flex-1 truncate text-[13px] ${tone}`}>{slot.name}</span>
+            )}
           </>
         ) : (
           <span className="min-w-0 flex-1 truncate font-condensed text-xs font-semibold uppercase tracking-wide text-zinc-600">
@@ -156,8 +157,10 @@ function SlotRow({ slot }: { slot: Slot }) {
           </span>
         ) : (
           slot.points !== null && (
-            <span className="shrink-0 font-condensed text-[11px] font-bold uppercase tracking-wide tabular-nums text-zinc-500">
-              {slot.points} pts
+            // Figure over label rather than side by side: the width goes to the names.
+            <span className="flex shrink-0 flex-col items-center font-condensed font-bold uppercase leading-none tabular-nums text-zinc-500">
+              <span className="text-[13px]">{slot.points}</span>
+              <span className="mt-0.5 text-[9px] tracking-wide">pts</span>
             </span>
           )
         )}
@@ -343,8 +346,8 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
   // One column per round plus the Finalissima and the trophy, with a connector between.
   const gridClass =
     rounds.length > 1
-      ? 'lg:grid-cols-[minmax(0,1fr)_2rem_minmax(0,1fr)_2rem_minmax(0,1fr)_2rem_minmax(0,0.85fr)]'
-      : 'lg:grid-cols-[minmax(0,1.1fr)_2.5rem_minmax(0,1fr)_2.5rem_minmax(0,0.9fr)]';
+      ? 'xl:grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)_1.5rem_minmax(0,1fr)_1.5rem_minmax(0,0.7fr)]'
+      : 'xl:grid-cols-[minmax(0,1.1fr)_2.5rem_minmax(0,1fr)_2.5rem_minmax(0,0.9fr)]';
 
   return (
     <div className="panel p-5 sm:p-6">
@@ -368,7 +371,7 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
         </div>
       </div>
 
-      <div className={`grid gap-4 lg:items-stretch lg:gap-x-0 ${gridClass}`}>
+      <div className={`grid gap-4 xl:items-stretch xl:gap-x-0 ${gridClass}`}>
         {rounds.map((round) => (
           <Fragment key={round.key}>
             <Round label={round.label} accent={round.accent}>
@@ -397,11 +400,14 @@ export default function RoadToFinal({ detail }: { detail: EditionDetail }) {
 
         <Round label="Campeón">
           {champ ? (
-            <div className="flex items-center gap-3 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-3">
-              <span className="text-2xl">🏆</span>
-              <span className="min-w-0 truncate font-display text-xl uppercase leading-none tracking-tight text-white">
-                {champ.name}
-              </span>
+            // Trophy over the names, not beside them: the column is the narrowest in the bracket.
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-2.5 py-3">
+              <span className="text-2xl leading-none">🏆</span>
+              <PlayerNames
+                players={[champ.player1, champ.player2]}
+                align="center"
+                className="max-w-full gap-1 font-display text-lg uppercase leading-none tracking-tight text-white"
+              />
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-lg border border-dashed border-coal-700 bg-coal-950/40 px-3 py-3">

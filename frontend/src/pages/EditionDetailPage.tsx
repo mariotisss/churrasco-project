@@ -18,6 +18,7 @@ import FinalissimaBox from '../components/FinalissimaBox';
 import TeamDrawPanel from '../components/TeamDrawPanel';
 import DrawRevealOverlay from '../components/DrawRevealOverlay';
 import TeamCrest from '../components/TeamCrest';
+import PlayerNames from '../components/PlayerNames';
 import TeamLineup from '../components/TeamLineup';
 import RoadToFinal from '../components/RoadToFinal';
 import QualificationOdds from '../components/QualificationOdds';
@@ -213,9 +214,10 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
                     className="flex min-w-0 items-center gap-2 py-1.5 pl-2.5 pr-3"
                   >
                     <TeamCrest name={next.homeTeam.name} players={[next.homeTeam.player1, next.homeTeam.player2]} size="md" />
-                    <span className="truncate text-[15px] font-semibold text-zinc-100">
-                      {next.homeTeam.name}
-                    </span>
+                    <PlayerNames
+                      players={[next.homeTeam.player1, next.homeTeam.player2]}
+                      className="text-[15px] font-semibold leading-tight text-zinc-100"
+                    />
                   </SideCard>
                   <span className="font-display text-lg text-ember-400">VS</span>
                   <SideCard
@@ -223,9 +225,11 @@ function NextUpAndFinal({ edition }: { edition: EditionDetail }) {
                     edge="right"
                     className="flex min-w-0 items-center gap-2 py-1.5 pl-3 pr-2.5"
                   >
-                    <span className="truncate text-[15px] font-semibold text-zinc-100">
-                      {next.awayTeam.name}
-                    </span>
+                    <PlayerNames
+                      players={[next.awayTeam.player1, next.awayTeam.player2]}
+                      align="right"
+                      className="text-[15px] font-semibold leading-tight text-zinc-100"
+                    />
                     <TeamCrest name={next.awayTeam.name} players={[next.awayTeam.player1, next.awayTeam.player2]} size="md" />
                   </SideCard>
                 </>

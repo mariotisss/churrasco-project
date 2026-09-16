@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { EditionDetail } from '../api/types';
 import { hasBracket, oddsSpots, qualificationOdds } from '../lib/tournament';
 import TeamCrest from './TeamCrest';
+import PlayerNames from './PlayerNames';
 
 /** Human-friendly percentage: keeps the extremes honest (<1% / >99%). */
 function formatPct(p: number): string {
@@ -88,13 +89,12 @@ export default function QualificationOdds({ detail }: { detail: EditionDetail })
             <li key={team.teamId} className="flex items-center gap-3">
               <div className="flex min-w-0 flex-[1.4] items-center gap-2.5">
                 <TeamCrest name={team.teamName} players={team.players} size="sm" />
-                <span
-                  className={`min-w-0 truncate text-[15px] ${
+                <PlayerNames
+                  players={team.players}
+                  className={`text-sm leading-tight ${
                     qualifies ? 'font-semibold text-zinc-100' : 'font-medium text-zinc-300'
                   }`}
-                >
-                  {team.teamName}
-                </span>
+                />
               </div>
               <div className="flex flex-[2] items-center gap-3">
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-coal-800">

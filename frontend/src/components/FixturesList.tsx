@@ -4,6 +4,7 @@ import { apiErrorMessage } from '../api/client';
 import type { Leg, MatchDto } from '../api/types';
 import { LEG_LABELS } from '../lib/tournament';
 import TeamCrest from './TeamCrest';
+import PlayerNames from './PlayerNames';
 import { SideCard, sidesForMatch } from './MatchSide';
 import SideChooser from './SideChooser';
 
@@ -128,13 +129,11 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
           edge="left"
           className="flex min-w-0 flex-1 items-center justify-end gap-2.5 py-1.5 pl-2.5 pr-2 text-right"
         >
-          <span
-            className={`min-w-0 truncate text-[15px] ${
-              homeWon ? 'font-bold text-white' : 'font-medium text-zinc-200'
-            }`}
-          >
-            {match.homeTeam.name}
-          </span>
+          <PlayerNames
+            players={[match.homeTeam.player1, match.homeTeam.player2]}
+            align="right"
+            className={`text-sm leading-tight ${homeWon ? 'font-bold text-white' : 'font-medium text-zinc-200'}`}
+          />
           <TeamCrest name={match.homeTeam.name} players={[match.homeTeam.player1, match.homeTeam.player2]} size="sm" />
         </SideCard>
 
@@ -160,13 +159,10 @@ export function MatchRow({ match, editionId }: { match: MatchDto; editionId: num
           className="flex min-w-0 flex-1 items-center gap-2.5 py-1.5 pl-2 pr-2.5"
         >
           <TeamCrest name={match.awayTeam.name} players={[match.awayTeam.player1, match.awayTeam.player2]} size="sm" />
-          <span
-            className={`min-w-0 truncate text-[15px] ${
-              awayWon ? 'font-bold text-white' : 'font-medium text-zinc-200'
-            }`}
-          >
-            {match.awayTeam.name}
-          </span>
+          <PlayerNames
+            players={[match.awayTeam.player1, match.awayTeam.player2]}
+            className={`text-sm leading-tight ${awayWon ? 'font-bold text-white' : 'font-medium text-zinc-200'}`}
+          />
         </SideCard>
 
         {/* Action */}
