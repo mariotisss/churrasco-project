@@ -61,15 +61,10 @@ const NAV: NavItem[] = [
   { to: '/penalties', label: 'Penalizaciones', short: 'Penas', Icon: CardIcon },
 ];
 
-function Brand() {
+function Brand({ className }: { className?: string }) {
   return (
-    <NavLink to="/" className="group flex flex-col leading-none">
-      <span className="font-display text-xl uppercase tracking-tight text-white transition group-hover:text-ember-300">
-        Churrasco&apos;s Cup!
-      </span>
-      <span className="mt-1.5 font-condensed text-[10px] font-semibold uppercase tracking-broadcast text-ember-400/90">
-        Liga de futbolín
-      </span>
+    <NavLink to="/" className={`block shrink-0 transition hover:scale-[1.03] hover:brightness-110 ${className ?? ''}`}>
+      <img src="/logo.webp" alt="Churrasco's Cup · Liga de futbolín" width={640} height={639} className="h-full w-full" />
     </NavLink>
   );
 }
@@ -156,7 +151,7 @@ export default function App() {
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-coal-700/60 bg-coal-950/80 backdrop-blur-xl lg:flex">
         <div className="h-1 w-full bg-gradient-to-r from-ember-600 via-ember-400 to-ember-600" />
         <div className="flex flex-1 flex-col gap-8 overflow-y-auto px-5 py-6">
-          <Brand />
+          <Brand className="mx-auto w-44" />
           <nav className="flex flex-col gap-1">
             {NAV.map((item) => (
               <SideNavItem key={item.to} {...item} />
@@ -171,8 +166,8 @@ export default function App() {
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 border-b border-coal-700/60 bg-coal-950/85 backdrop-blur-xl lg:hidden">
         <div className="h-1 w-full bg-gradient-to-r from-ember-600 via-ember-400 to-ember-600" />
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <Brand />
+        <div className="flex items-center justify-between gap-3 px-4 py-2">
+          <Brand className="h-12 w-12" />
           <nav className="flex items-center gap-1 rounded-xl border border-coal-700/60 bg-coal-900/70 p-1">
             {NAV.map(({ to, label, short }) => (
               <NavLink
