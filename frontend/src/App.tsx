@@ -151,7 +151,7 @@ export default function App() {
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-coal-700/60 bg-coal-950/80 backdrop-blur-xl lg:flex">
         <div className="h-1 w-full bg-gradient-to-r from-ember-600 via-ember-400 to-ember-600" />
         <div className="flex flex-1 flex-col gap-8 overflow-y-auto px-5 py-6">
-          <Brand className="mx-auto w-44" />
+          <Brand className="mx-auto w-[150px]" />
           <nav className="flex flex-col gap-1">
             {NAV.map((item) => (
               <SideNavItem key={item.to} {...item} />
